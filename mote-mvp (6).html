@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mote</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script>
+// Check supabase loaded
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof supabase === 'undefined') {
+    document.getElementById('screen-loading').innerHTML = '<p style="color:#b0aaa2;font-size:0.8rem;font-family:sans-serif;padding:2rem;">Connection error. Please refresh.</p>';
+  }
+});
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; font-weight: 300; background: linear-gradient(135deg, #1a1a18 0%, #0e0e0d 45%, #0a0a09 100%); min-height: 100vh; }
+  .screen { display: none; min-height: 100vh; padding: 3rem 2rem; max-width: 680px; margin: 0 auto; flex-direction: column; justify-content: center; }
+  .screen.active { display: flex; }
+  .screen.top { justify-content: flex-start; padding-top: 3rem; }
+  .wordmark { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 1.1rem; letter-spacing: 0.35em; text-transform: uppercase; color: #8a8278; margin-bottom: 4rem; }
+  .tagline { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 300; line-height: 1.2; color: #e8e4dc; margin-bottom: 1.5rem; }
+  .tagline em { font-style: italic; color: #b5a99a; }
+  .sub { font-size: 0.9rem; color: #b0aaa2; line-height: 1.7; max-width: 420px; margin-bottom: 3.5rem; }
+  .section-label { font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase; color: #b0aaa2; margin-bottom: 2rem; }
+  .section-question { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; color: #c8c2b8; margin-bottom: 2rem; line-height: 1.3; }
+  .mood-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 3rem; }
+  .intention-grid { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 3rem; }
+  .filter-row { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .content-grid { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2.5rem; }
+  .star-row { display: flex; gap: 0.6rem; margin-bottom: 2rem; }
+  .emotion-grid { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .divider { height: 1px; background: #2a2820; margin: 2rem 0; }
+  .intensity-row { margin-top: 0.75rem; margin-bottom: 1.5rem; font-size: 0.75rem; color: #b0aaa2; letter-spacing: 0.06em; display: none; }
+  .intensity-row.visible { display: block; }
+  .intensity-dots { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  .star { width: 32px; height: 32px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .star svg { transition: all 0.15s ease; }
+  .star:hover svg path, .star.lit svg path { fill: #c8a87a; stroke: #c8a87a; }
+  .thumb { width: 90px; height: 58px; background: #1e1d1b; flex-shrink: 0; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .play-icon { width: 0; height: 0; border-style: solid; border-width: 7px 0 7px 12px; border-color: transparent transparent transparent #6a6458; }
+  button.mood-btn { padding: 1.4rem 1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 300; cursor: pointer; text-align: left; transition: all 0.2s ease; width: 100%; }
+  button.mood-btn:hover { border-color: #8a8278; background: #222018; }
+  button.mood-btn.selected { border-color: #c8c2b8; background: #222018; }
+  span.mood-desc { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 300; color: #b0aaa2; letter-spacing: 0.05em; margin-top: 0.4rem; }
+  button.intention-btn { padding: 1.2rem 1.4rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 300; cursor: pointer; text-align: left; transition: all 0.2s ease; width: 100%; }
+  button.intention-btn:hover { border-color: #8a8278; background: #222018; }
+  button.intention-btn.selected { border-color: #c8c2b8; background: #222018; }
+  span.intention-desc { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 300; color: #b0aaa2; letter-spacing: 0.04em; margin-top: 0.3rem; }
+  button.filter-chip { padding: 0.55rem 1.1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 300; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s ease; }
+  button.filter-chip:hover { border-color: #8a8278; background: #222018; }
+  button.filter-chip.selected { border-color: #c8c2b8; background: #222018; }
+  button.emotion-btn { padding: 0.55rem 1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 300; cursor: pointer; transition: all 0.2s ease; letter-spacing: 0.04em; }
+  button.emotion-btn:hover { border-color: #8a8278; background: #222018; }
+  button.emotion-btn.selected { border-color: #c8c2b8; background: #222018; }
+  button.content-card { display: flex; gap: 1.2rem; padding: 1.1rem; border: 1px solid #383428; background: #141410; cursor: pointer; text-align: left; width: 100%; align-items: flex-start; transition: all 0.2s ease; }
+  button.content-card:hover { border-color: #6a6458; background: #1c1c18; }
+  button.content-card.selected { border-color: #c8c2b8; background: #1c1c18; }
+  button.btn-primary { display: inline-block; padding: 0.85rem 2.2rem; border: 1px solid #6a6458; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase; background: transparent; cursor: pointer; transition: all 0.25s ease; }
+  button.btn-primary:hover { border-color: #c8c2b8; background: rgba(200,194,184,0.08); }
+  button.btn-small { padding: 0.5rem 1.2rem; border: 1px solid #555048; color: #b0aaa2; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; background: transparent; cursor: pointer; transition: all 0.2s ease; }
+  button.btn-small:hover { border-color: #8a8278; color: #e8e4dc; }
+  button.nav-back { background: none; border: none; color: #b0aaa2; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; padding: 0; margin-bottom: 2.5rem; transition: color 0.2s; }
+  button.nav-back:hover { color: #e8e4dc; }
+  button.intensity-dot { width: 26px; height: 26px; border: 1px solid #555048; background: #181814; cursor: pointer; font-size: 0.72rem; color: #e8e4dc; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
+  button.intensity-dot.selected { border-color: #c8c2b8; background: #222018; }
+  .card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 400; color: #e8e4dc; line-height: 1.3; margin-bottom: 0.25rem; }
+  .card-detail { font-size: 0.72rem; color: #b0aaa2; letter-spacing: 0.04em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .intensity-pill { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: #3a3428; background: #d8d2c8; padding: 0.12rem 0.45rem; font-family: 'DM Sans', sans-serif; font-weight: 400; flex-shrink: 0; }
+  .card-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .tag { font-size: 0.63rem; letter-spacing: 0.07em; color: #b0aaa2; border: 1px solid #383428; padding: 0.12rem 0.4rem; text-transform: uppercase; }
+  .watch-area { background: #0a0a09; aspect-ratio: 16/9; width: 100%; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; }
+  .watch-area iframe { width: 100%; height: 100%; border: none; }
+  .feedback-prompt { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-style: italic; color: #c8c2b8; margin-bottom: 1.8rem; line-height: 1.5; }
+  .complete-msg { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 300; font-style: italic; color: #c8c2b8; margin-bottom: 0.75rem; }
+  .complete-sub { font-size: 0.82rem; color: #b0aaa2; line-height: 1.6; margin-bottom: 2.5rem; }
+  .empty-state { font-size: 0.85rem; color: #6a6458; font-style: italic; padding: 2rem 0; text-align: center; }
+  .nav-bar { display: flex; gap: 1.5rem; margin-bottom: 3rem; }
+  .nav-item { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6458; cursor: pointer; background: none; border: none; padding: 0; transition: color 0.2s; font-family: 'DM Sans', sans-serif; }
+  .nav-item:hover, .nav-item.active { color: #b0aaa2; }
+  .session-summary { font-size: 0.75rem; color: #6a6458; margin-bottom: 2rem; font-style: italic; letter-spacing: 0.03em; }
+  .viz-block { margin-bottom: 2.5rem; }
+  .viz-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 400; color: #c8c2b8; margin-bottom: 0.3rem; }
+  .viz-sub { font-size: 0.75rem; color: #6a6458; margin-bottom: 1.2rem; letter-spacing: 0.03em; line-height: 1.5; }
+  .emotion-bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .emotion-bar-label { font-size: 0.72rem; color: #b0aaa2; width: 80px; flex-shrink: 0; }
+  .emotion-bar-track { flex: 1; height: 4px; background: #1e1d1b; }
+  .emotion-bar-fill { height: 100%; background: #8a8278; }
+  .emotion-bar-count { font-size: 0.68rem; color: #6a6458; width: 30px; text-align: right; flex-shrink: 0; }
+  .mood-flow-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+  .mood-flow-label { font-size: 0.72rem; color: #b0aaa2; width: 80px; flex-shrink: 0; }
+  .mood-flow-bar { height: 20px; background: #181814; border: 1px solid #2a2820; flex: 1; overflow: hidden; }
+  .mood-flow-fill { height: 100%; background: #3a3830; }
+  .mood-flow-count { font-size: 0.68rem; color: #6a6458; width: 35px; text-align: right; flex-shrink: 0; }
+  .drift-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #1e1d1b; }
+  .drift-title { font-size: 0.78rem; color: #c8c2b8; flex: 1; font-family: 'Cormorant Garamond', serif; }
+  .drift-editorial { font-size: 0.65rem; color: #6a6458; letter-spacing: 0.06em; }
+  .drift-crowd { font-size: 0.65rem; letter-spacing: 0.06em; }
+  .drift-up { color: #c8a87a; }
+  .drift-same { color: #6a6458; }
+  .drift-down { color: #8a9a8a; }
+  .intention-flow-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+  .intention-flow-cell { background: #141410; border: 1px solid #2a2820; padding: 0.75rem; }
+  .intention-flow-name { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6a6458; margin-bottom: 0.3rem; }
+  .intention-flow-count { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: #c8c2b8; }
+  .privacy-note { font-size: 0.68rem; color: #4a4840; line-height: 1.6; border-top: 1px solid #1e1d1b; padding-top: 1.5rem; margin-top: 1rem; }
+  .history-entry { padding: 1rem; border: 1px solid #2a2820; background: #141410; margin-bottom: 0.6rem; }
+  .history-title { font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: #c8c2b8; margin-bottom: 0.3rem; }
+  .history-meta { font-size: 0.68rem; color: #6a6458; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+  .history-emotions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+  .history-emotion { font-size: 0.62rem; letter-spacing: 0.07em; color: #8a8278; border: 1px solid #2a2820; padding: 0.1rem 0.4rem; text-transform: uppercase; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 2rem; }
+  .stat-card { background: #141410; border: 1px solid #2a2820; padding: 1rem; }
+  .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: #c8c2b8; line-height: 1; margin-bottom: 0.25rem; }
+  .stat-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6a6458; }
+  .mood-pattern-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+  .mood-pattern-label { font-size: 0.72rem; color: #b0aaa2; width: 75px; flex-shrink: 0; }
+  .mood-dots { display: flex; gap: 3px; }
+  .mood-dot { width: 8px; height: 8px; background: #2a2820; }
+  .mood-dot.filled { background: #8a8278; }
+  svg text { fill: #c8c2b8 !important; text-decoration: none !important; }
+  /* Auth screens */
+  .auth-form { display: flex; flex-direction: column; gap: 1rem; max-width: 360px; margin-bottom: 2rem; }
+  .auth-input { padding: 0.85rem 1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 300; outline: none; transition: border-color 0.2s; width: 100%; }
+  .auth-input:focus { border-color: #8a8278; }
+  .auth-input::placeholder { color: #4a4540; }
+  .auth-switch { font-size: 0.78rem; color: #6a6458; cursor: pointer; background: none; border: none; padding: 0; font-family: 'DM Sans', sans-serif; transition: color 0.2s; text-align: left; }
+  .auth-switch:hover { color: #b0aaa2; }
+  .auth-error { font-size: 0.75rem; color: #c8a87a; margin-top: 0.5rem; min-height: 1rem; }
+  .auth-note { font-size: 0.72rem; color: #4a4540; line-height: 1.6; margin-top: 1rem; max-width: 360px; }
+  .user-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3rem; }
+  .user-email { font-size: 0.68rem; color: #4a4540; letter-spacing: 0.04em; }
+  .loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .loading-dot { width: 6px; height: 6px; background: #4a4540; border-radius: 50%; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="screen-loading">
+  <div class="loading-dot"></div>
+</div>
+
+<!-- AUTH: SIGN IN / SIGN UP -->
+<div class="screen" id="screen-auth">
+  <div style="margin-bottom:3.5rem;isolation:isolate;">
+    <svg width="180" height="100" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(-28 0)">
+        <g fill="none" stroke="#b0aaa2" stroke-width="1.5" stroke-linecap="round">
+          <path d="M 51.9 28.0 A 44 44 0 0 1 128.1 28.0"/>
+          <path d="M 128.1 72.0 A 44 44 0 0 1 51.9 72.0"/>
+        </g>
+        <text font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="300" letter-spacing="4" fill="#c8c2b8" text-anchor="middle" dominant-baseline="middle" x="90" y="52" style="font-style:normal;">MOTE</text>
+        <circle cx="80" cy="48" r="5.5" fill="#0e0e0d"/>
+        <circle cx="80" cy="48" r="2.8" fill="#b0aaa2"/>
+      </g>
+    </svg>
+  </div>
+  <p class="section-question" id="auth-title">Sign in</p>
+  <div class="auth-form">
+    <input class="auth-input" type="email" id="auth-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-input" type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+    <div class="auth-error" id="auth-error"></div>
+    <button class="btn-primary" onclick="handleAuth()">Continue</button>
+    <button class="auth-switch" id="auth-switch-btn" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
+  </div>
+  <p class="auth-note">Mote remembers your history across sessions and devices. Your data is never shared without your explicit consent.</p>
+</div>
+
+<!-- LANDING -->
+<div class="screen" id="screen-landing">
+  <div style="margin-bottom:3.5rem;isolation:isolate;">
+    <svg width="180" height="100" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(-28 0)">
+        <g fill="none" stroke="#b0aaa2" stroke-width="1.5" stroke-linecap="round">
+          <path d="M 51.9 28.0 A 44 44 0 0 1 128.1 28.0"/>
+          <path d="M 128.1 72.0 A 44 44 0 0 1 51.9 72.0"/>
+        </g>
+        <text font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="300" letter-spacing="4" fill="#c8c2b8" text-anchor="middle" dominant-baseline="middle" x="90" y="52" style="font-style:normal;">MOTE</text>
+        <circle cx="80" cy="48" r="5.5" fill="#0e0e0d"/>
+        <circle cx="80" cy="48" r="2.8" fill="#b0aaa2"/>
+      </g>
+    </svg>
+  </div>
+  <h1 class="tagline">Watch.<br><em>Feel.</em><br>Think.</h1>
+  <p class="sub">A quiet space for content that challenges you emotionally while rewarding careful thought. No metrics. No feed. No noise.</p>
+  <div class="btn-row">
+    <button class="btn-primary" onclick="go('screen-mood')">Enter</button>
+    <button class="btn-small" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+</div>
+
+<!-- STEP 1: HOW AM I FEELING -->
+<div class="screen" id="screen-mood">
+  <div class="user-bar">
+    <div class="nav-bar" style="margin-bottom:0;">
+      <button class="nav-item active">Commons</button>
+      <button class="nav-item" onclick="go('screen-history')">My history</button>
+      <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+    </div>
+    <button class="auth-switch" onclick="signOut()" style="font-size:0.65rem;">Sign out</button>
+  </div>
+  <p class="section-question">How am I feeling?</p>
+  <div class="mood-grid">
+    <button class="mood-btn" onclick="selectMood(this,'Reflective')">Reflective<span class="mood-desc">Turning inward, processing</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'Curious')">Curious<span class="mood-desc">Open, wanting to learn</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'Inspired')">Inspired<span class="mood-desc">Energized, ready to engage</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'Grounded')">Grounded<span class="mood-desc">Settled, present, calm</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'Heavy')">Heavy<span class="mood-desc">Carrying something difficult</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'Restless')">Restless<span class="mood-desc">Searching, not yet settled</span></button>
+  </div>
+</div>
+
+<!-- STEP 2: CONTENT INTENTION -->
+<div class="screen" id="screen-intention">
+  <div class="nav-bar">
+    <button class="nav-item active">Commons</button>
+    <button class="nav-item" onclick="go('screen-history')">My history</button>
+    <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+  <p class="section-question">I want content that:</p>
+  <div class="intention-grid">
+    <button class="intention-btn" onclick="selectIntention(this,'meets')">Meets me where I am<span class="intention-desc">Content that matches my current emotional state</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'through')">Helps me think through it<span class="intention-desc">Intellectually engaged with what I'm feeling</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'different')">Pulls me somewhere different<span class="intention-desc">A deliberate shift in emotional direction</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'breathe')">Gives me room to breathe<span class="intention-desc">Lower intensity, lighter engagement</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'challenges')">Challenges me<span class="intention-desc">Demanding content regardless of my current state</span></button>
+  </div>
+</div>
+
+<!-- OPTIONAL FILTERS -->
+<div class="screen" id="screen-filters">
+  <button class="nav-back" onclick="go('screen-intention')">← Back</button>
+  <p class="session-summary" id="session-summary"></p>
+  <p class="section-label">Optional filters</p>
+  <div class="filter-row" id="length-filters">
+    <button class="filter-chip" onclick="toggleFilter(this,'length','short')">Short &lt;15m</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'length','medium')">Medium 15–40m</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'length','long')">Long 40m+</button>
+  </div>
+  <div class="filter-row" id="cat-filters">
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Film')">Film</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Science')">Science</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Philosophy')">Philosophy</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Nature')">Nature</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Visual Essay')">Visual Essay</button>
+  </div>
+  <button class="btn-primary" onclick="startSession()">Show me content</button>
+</div>
+
+<!-- COMMONS -->
+<div class="screen" id="screen-commons">
+  <button class="nav-back" onclick="go('screen-mood')">← Start over</button>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.5rem;">
+    <p class="section-label" style="margin-bottom:0;">The Commons</p>
+    <span id="commons-label" style="font-family:'Cormorant Garamond',serif;font-size:0.85rem;font-style:italic;color:#6a6458;"></span>
+  </div>
+  <div class="divider" style="margin-top:0.75rem;margin-bottom:1.5rem;"></div>
+  <div class="content-grid" id="content-grid"></div>
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <button class="btn-primary" id="watch-btn" onclick="goWatch()" style="opacity:0.35;pointer-events:none;">Watch selected</button>
+    <button class="btn-small" onclick="refreshContent()">Refresh</button>
+  </div>
+</div>
+
+<!-- WATCH -->
+<div class="screen" id="screen-watch">
+  <button class="nav-back" onclick="go('screen-commons')">← Back to commons</button>
+  <div class="watch-area" id="watch-embed"><div style="color:#555048;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;">Loading</div></div>
+  <p style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;color:#e8e4dc;margin-bottom:0.4rem;" id="watch-title"></p>
+  <p style="font-size:0.75rem;color:#b0aaa2;margin-bottom:2rem;letter-spacing:0.04em;" id="watch-meta"></p>
+  <div class="divider"></div>
+  <button class="btn-primary" onclick="go('screen-feedback')">I've finished watching</button>
+</div>
+
+<!-- FEEDBACK -->
+<div class="screen" id="screen-feedback">
+  <div class="wordmark">Mote</div>
+  <p class="feedback-prompt" id="feedback-title-echo"></p>
+  <p class="section-label">How would I rate this?</p>
+  <div class="star-row">
+    <button class="star" onclick="setStar(1)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+    <button class="star" onclick="setStar(2)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+    <button class="star" onclick="setStar(3)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+    <button class="star" onclick="setStar(4)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+    <button class="star" onclick="setStar(5)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+  </div>
+  <p class="section-label">What did I feel? <span style="color:#6a6458;font-size:0.65rem;">(choose up to 2)</span></p>
+  <div class="emotion-grid">
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Moved</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Unsettled</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Clarity</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Wonder</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Grief</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Calm</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Provoked</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Awe</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Tenderness</button>
+    <button class="emotion-btn" onclick="toggleEmotion(this)">Resolve</button>
+  </div>
+  <div class="intensity-row" id="intensity-row">
+    <span>Intensity scale</span>
+    <div class="intensity-dots">
+      <button class="intensity-dot" onclick="setIntensity(1)">1</button>
+      <button class="intensity-dot" onclick="setIntensity(2)">2</button>
+      <button class="intensity-dot" onclick="setIntensity(3)">3</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="btn-row">
+    <button class="btn-primary" onclick="submitFeedback()">Save response</button>
+    <button class="btn-small" onclick="go('screen-commons')">Skip</button>
+  </div>
+</div>
+
+<!-- COMPLETE -->
+<div class="screen" id="screen-complete">
+  <div class="wordmark">Mote</div>
+  <p class="complete-msg">Thank you.</p>
+  <p class="complete-sub">Your response has been recorded. It will help surface this content for others navigating the same feeling.</p>
+  <div class="btn-row">
+    <button class="btn-primary" onclick="go('screen-mood')">Watch something else</button>
+    <button class="btn-small" onclick="go('screen-history')">See my history</button>
+  </div>
+</div>
+
+<!-- WHAT MOTE IS LEARNING -->
+<div class="screen top" id="screen-viz">
+  <div class="nav-bar">
+    <button class="nav-item" onclick="go('screen-mood')">Commons</button>
+    <button class="nav-item" onclick="go('screen-history')">My history</button>
+    <button class="nav-item active">What Mote is learning</button>
+  </div>
+  <p class="section-label" style="margin-bottom:0.5rem;">Aggregate responses</p>
+  <p style="font-size:0.78rem;color:#6a6458;margin-bottom:2.5rem;line-height:1.6;">Across all sessions. No individual responses are stored or identified.</p>
+  <div class="viz-block">
+    <p class="viz-title">Emotional fingerprint</p>
+    <p class="viz-sub">Which emotions the platform generates most frequently across all content and moods.</p>
+    <div id="emotion-bars"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">How people are arriving</p>
+    <p class="viz-sub">Mood on arrival across sessions — what users bring to the platform, not what it prescribes.</p>
+    <div id="mood-flows"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">What people are seeking</p>
+    <p class="viz-sub">Content intention selections. The gap between how someone feels and what they choose to watch.</p>
+    <div class="intention-flow-grid" id="intention-flows"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">Intensity calibration</p>
+    <p class="viz-sub">Where crowd-sourced intensity diverges from editorial starting points.</p>
+    <div id="drift-rows"></div>
+  </div>
+  <p class="privacy-note">All data shown here is aggregated across sessions. Mote does not track individual responses without explicit opt-in. Your personal history is visible only to you and can be deleted at any time.</p>
+</div>
+
+<!-- MY HISTORY -->
+<div class="screen top" id="screen-history">
+  <div class="nav-bar">
+    <button class="nav-item" onclick="go('screen-mood')">Commons</button>
+    <button class="nav-item active">My history</button>
+    <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+  <div id="history-content"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ghcgfkjayzjzfozbwbfs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_khwkU15vaEB40c5vx2_VdQ_PQrdmrKN';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentSessionId = null;
+let authMode = 'signin';
+
+const CONTENT=[
+  {id:1,title:"Pale Blue Dot",creator:"Carl Sagan",duration:"4m",durationKey:"short",category:"Philosophy",moods:["Reflective","Heavy","Grounded"],ytId:"GO5FwsblpT8",tags:["cosmos","humility","meaning"],intensity:2},
+  {id:2,title:"Overview",creator:"Planetary Collective",duration:"19m",durationKey:"medium",category:"Science",moods:["Reflective","Inspired","Heavy"],ytId:"ChTDDGQFeoA",tags:["space","consciousness","perspective"],intensity:2},
+  {id:3,title:"The Last Lecture",creator:"Randy Pausch",duration:"76m",durationKey:"long",category:"Philosophy",moods:["Reflective","Inspired"],ytId:"ji5_MqicxSo",tags:["mortality","dreams","legacy"],intensity:3},
+  {id:4,title:"My Stroke of Insight",creator:"Jill Bolte Taylor",duration:"18m",durationKey:"medium",category:"Science",moods:["Reflective","Curious"],ytId:"UyyjU8fzEYU",tags:["brain","consciousness","mortality"],intensity:3},
+  {id:5,title:"Everybody Dies But Not Everybody Lives",creator:"Prince Ea",duration:"4m",durationKey:"short",category:"Philosophy",moods:["Reflective","Restless"],ytId:"h6TwEPEOzus",tags:["life","purpose","urgency"],intensity:1},
+  {id:6,title:"Dick Johnson Is Dead",creator:"Kirsten Johnson",duration:"12m",durationKey:"short",category:"Film",moods:["Reflective","Heavy"],ytId:"0LULWzFbkFs",tags:["death","family","love"],intensity:3},
+  {id:7,title:"Powers of Ten",creator:"Charles & Ray Eames",duration:"9m",durationKey:"short",category:"Science",moods:["Curious","Reflective","Grounded"],ytId:"0fKBhvDjuy0",tags:["scale","cosmos","perspective"],intensity:1},
+  {id:8,title:"The Pleasure of Finding Things Out",creator:"Richard Feynman",duration:"49m",durationKey:"long",category:"Science",moods:["Curious","Inspired"],ytId:"Bgaw9qe7DEE",tags:["science","wonder","knowing"],intensity:1},
+  {id:9,title:"Do Schools Kill Creativity?",creator:"Ken Robinson",duration:"19m",durationKey:"medium",category:"Philosophy",moods:["Curious","Restless","Inspired"],ytId:"iG9CE55wbtY",tags:["education","creativity","society"],intensity:1},
+  {id:10,title:"The Math Behind Basketball",creator:"Rajiv Maheswaran",duration:"12m",durationKey:"short",category:"Science",moods:["Curious"],ytId:"uXoh6vi6J5U",tags:["data","sport","pattern"],intensity:1},
+  {id:11,title:"How Much of the Earth Can You See at Once?",creator:"Vsauce",duration:"20m",durationKey:"medium",category:"Visual Essay",moods:["Curious","Grounded"],ytId:"mxhxL1LpKmA",tags:["perception","geometry","scale"],intensity:1},
+  {id:12,title:"Everything is a Remix",creator:"Kirby Ferguson",duration:"37m",durationKey:"medium",category:"Visual Essay",moods:["Curious","Restless","Inspired"],ytId:"nJPERZDfyWc",tags:["creativity","originality","culture"],intensity:2},
+  {id:13,title:"How to Speak",creator:"Patrick Winston, MIT",duration:"60m",durationKey:"long",category:"Philosophy",moods:["Curious","Inspired"],ytId:"Unzc731iCUY",tags:["communication","teaching","craft"],intensity:1},
+  {id:14,title:"Jiro Dreams of Sushi",creator:"David Gelb",duration:"15m",durationKey:"medium",category:"Film",moods:["Inspired","Grounded"],ytId:"I1UDS2rh1mY",tags:["mastery","craft","dedication"],intensity:2},
+  {id:15,title:"The Art of Asking",creator:"Amanda Palmer",duration:"13m",durationKey:"short",category:"Philosophy",moods:["Inspired","Heavy","Restless"],ytId:"xMj_P_6H69g",tags:["vulnerability","connection","art"],intensity:2},
+  {id:16,title:"Steve Jobs — Stanford Commencement",creator:"Stanford University",duration:"15m",durationKey:"medium",category:"Philosophy",moods:["Inspired","Reflective"],ytId:"UF8uR6Z6KLc",tags:["death","work","courage"],intensity:1},
+  {id:17,title:"Won't You Be My Neighbor?",creator:"Morgan Neville",duration:"15m",durationKey:"medium",category:"Film",moods:["Inspired","Heavy","Grounded"],ytId:"FhwktRDG_aQ",tags:["kindness","intention","television"],intensity:2},
+  {id:18,title:"Salt Fat Acid Heat",creator:"Samin Nosrat",duration:"15m",durationKey:"medium",category:"Film",moods:["Inspired","Grounded","Curious"],ytId:"SbHDPPMCmnA",tags:["food","joy","craft"],intensity:1},
+  {id:19,title:"Crip Camp",creator:"LeBrecht & Newnham",duration:"20m",durationKey:"medium",category:"Film",moods:["Inspired","Heavy"],ytId:"XRlvNl9PZBE",tags:["disability","rights","joy"],intensity:2},
+  {id:20,title:"The Creative Act — Rick Rubin",creator:"Diary of a CEO",duration:"20m",durationKey:"medium",category:"Philosophy",moods:["Inspired","Restless","Curious"],ytId:"H_szemxPcTI",tags:["creativity","process","making"],intensity:2},
+  {id:21,title:"Baraka — excerpt",creator:"Ron Fricke",duration:"15m",durationKey:"medium",category:"Film",moods:["Grounded","Reflective"],ytId:"RnME6HWHWHU",tags:["ritual","humanity","silence"],intensity:1},
+  {id:22,title:"Koyaanisqatsi — excerpt",creator:"Godfrey Reggio",duration:"15m",durationKey:"medium",category:"Film",moods:["Grounded","Restless","Curious"],ytId:"oNGfkHi1DRQ",tags:["civilization","pattern","time"],intensity:2},
+  {id:23,title:"Chef's Table — Jeong Kwan",creator:"Netflix",duration:"15m",durationKey:"medium",category:"Film",moods:["Grounded","Inspired","Reflective"],ytId:"oMINpFJdAKA",tags:["buddhism","food","presence"],intensity:2},
+  {id:24,title:"Rivers and Tides",creator:"Thomas Riedelsheimer",duration:"20m",durationKey:"medium",category:"Film",moods:["Grounded","Reflective"],ytId:"a8nDMNPWZFk",tags:["impermanence","nature","art"],intensity:2},
+  {id:25,title:"Fantastic Fungi — excerpt",creator:"Louie Schwartzberg",duration:"15m",durationKey:"medium",category:"Nature",moods:["Grounded","Curious"],ytId:"bxABml7dAVU",tags:["mycelium","time","nature"],intensity:1},
+  {id:26,title:"My Octopus Teacher — excerpt",creator:"Pippa Ehrlich & James Reed",duration:"15m",durationKey:"medium",category:"Nature",moods:["Grounded","Reflective","Inspired"],ytId:"3s0LTDhqe5A",tags:["attention","connection","nature"],intensity:2},
+  {id:27,title:"How to Speak So People Listen",creator:"Julian Treasure",duration:"10m",durationKey:"short",category:"Philosophy",moods:["Grounded","Curious"],ytId:"eIho2S0ZahI",tags:["voice","attention","presence"],intensity:1},
+  {id:28,title:"The Act of Killing — excerpt",creator:"Joshua Oppenheimer",duration:"15m",durationKey:"medium",category:"Film",moods:["Heavy"],ytId:"rPhMXLEMQFo",tags:["genocide","memory","complicity"],intensity:3},
+  {id:29,title:"13th — excerpt",creator:"Ava DuVernay",duration:"20m",durationKey:"medium",category:"Film",moods:["Heavy","Restless"],ytId:"krfcq5pF8u8",tags:["race","incarceration","America"],intensity:3},
+  {id:30,title:"Mr. Rogers Before Congress, 1969",creator:"Fred Rogers",duration:"7m",durationKey:"short",category:"Film",moods:["Heavy","Inspired","Grounded"],ytId:"yXEuEUQIP28",tags:["kindness","politics","television"],intensity:2},
+  {id:31,title:"Between the World and Me",creator:"HBO",duration:"15m",durationKey:"medium",category:"Film",moods:["Heavy","Reflective"],ytId:"l8T5JBtBxsQ",tags:["race","body","America"],intensity:3},
+  {id:32,title:"Seaspiracy — overfishing sequence",creator:"Ali Tabrizi",duration:"10m",durationKey:"short",category:"Film",moods:["Heavy","Curious"],ytId:"1Q5nrPNSmEo",tags:["ocean","industry","consequence"],intensity:2},
+  {id:33,title:"Icarus — the turning point",creator:"Bryan Fogel",duration:"15m",durationKey:"medium",category:"Film",moods:["Heavy","Restless"],ytId:"qXoRdSTrR-4",tags:["doping","power","truth"],intensity:3},
+  {id:34,title:"20 Feet from Stardom",creator:"Morgan Neville",duration:"15m",durationKey:"medium",category:"Film",moods:["Heavy","Restless","Inspired"],ytId:"MH_DY4BGTWI",tags:["talent","recognition","music"],intensity:2},
+  {id:35,title:"Inside the Mind of a Master Procrastinator",creator:"Tim Urban",duration:"14m",durationKey:"short",category:"Philosophy",moods:["Restless","Heavy","Curious"],ytId:"arj7oStGLkU",tags:["psychology","self","honesty"],intensity:1},
+  {id:36,title:"Stutz — excerpt",creator:"Jonah Hill",duration:"20m",durationKey:"medium",category:"Film",moods:["Restless","Heavy","Inspired"],ytId:"KMl8IQCL3wg",tags:["therapy","tools","movement"],intensity:2},
+  {id:37,title:"Comedian — excerpt",creator:"Christian Charles",duration:"15m",durationKey:"medium",category:"Film",moods:["Restless","Curious","Inspired"],ytId:"YnODkpYCHiw",tags:["craft","anxiety","making"],intensity:1},
+  {id:38,title:"Free Solo — preparation sequences",creator:"National Geographic",duration:"20m",durationKey:"medium",category:"Film",moods:["Restless","Inspired","Grounded"],ytId:"urRVZ4SW7WU",tags:["obsession","risk","precision"],intensity:2},
+  {id:39,title:"The Feynman Series — Beauty",creator:"Reid Gower",duration:"5m",durationKey:"short",category:"Science",moods:["Restless","Curious","Reflective"],ytId:"cRmbwczTC6E",tags:["science","beauty","wonder"],intensity:1},
+  {id:40,title:"Abstract — Ilse Crawford",creator:"Netflix",duration:"45m",durationKey:"long",category:"Film",moods:["Restless","Inspired","Grounded"],ytId:"vMN_pApHfO4",tags:["design","human","care"],intensity:1},
+  {id:41,title:"Everybody Street — excerpt",creator:"Cheryl Dunn",duration:"15m",durationKey:"medium",category:"Film",moods:["Restless","Curious","Inspired"],ytId:"vRTzXdFVCRs",tags:["photography","city","seeing"],intensity:2},
+  {id:42,title:"The Internet's Own Boy",creator:"Brian Knappenberger",duration:"20m",durationKey:"medium",category:"Film",moods:["Restless","Heavy"],ytId:"9vz06QO3UkQ",tags:["internet","justice","cost"],intensity:3}
+];
+
+const INTENTION_LOGIC={meets:{useMood:true,intensityFilter:null,moodBoost:1.4},through:{useMood:false,intensityFilter:[2,3],moodBoost:1.0},different:{useMood:true,intensityFilter:null,moodBoost:1.0,invert:true},breathe:{useMood:false,intensityFilter:[1],moodBoost:1.0},challenges:{useMood:false,intensityFilter:[2,3],moodBoost:1.0,highOnly:true}};
+const MOOD_OPPOSITES={Reflective:'Curious',Curious:'Grounded',Inspired:'Reflective',Grounded:'Restless',Heavy:'Grounded',Restless:'Grounded'};
+const INTENTION_LABELS={meets:'Meets me where I am',through:'Helps me think through it',different:'Pulls me somewhere different',breathe:'Gives me room to breathe',challenges:'Challenges me'};
+const SIM_DRIFT=[{title:"The Act of Killing",editorial:3,crowd:3,delta:0},{title:"13th",editorial:3,crowd:3,delta:0},{title:"My Stroke of Insight",editorial:3,crowd:2,delta:-1},{title:"Pale Blue Dot",editorial:2,crowd:3,delta:1},{title:"Mr. Rogers Before Congress",editorial:2,crowd:3,delta:1},{title:"Everything is a Remix",editorial:2,crowd:1,delta:-1},{title:"Powers of Ten",editorial:1,crowd:2,delta:1}];
+
+let currentMood=null,currentIntention=null,selectedContent=null;
+let currentRating=0,selectedEmotions=[],currentIntensity=0,shownContent=[];
+let activeFilters={length:null,cat:null};
+let liveScores={};
+CONTENT.forEach(c=>{liveScores[c.id]={ratingSum:c.intensity*20,ratingCount:20,intensitySum:c.intensity*20,intensityCount:20};});
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+async async function initAuth() {
+  const hideLoader = () => {
+    const l = document.getElementById('screen-loading');
+    if (l) l.style.display = 'none';
+  };
+  // Timeout fallback — if Supabase takes too long, go to auth anyway
+  const timeout = setTimeout(() => { hideLoader(); go('screen-auth'); }, 4000);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    clearTimeout(timeout);
+    hideLoader();
+    if (session) { currentUser = session.user; showApp(); }
+    else { go('screen-auth'); }
+  } catch(e) {
+    clearTimeout(timeout);
+    hideLoader();
+    go('screen-auth');
+  }
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) { currentUser = session.user; showApp(); }
+    else if (event === 'SIGNED_OUT') { currentUser = null; go('screen-auth'); }
+  });
+}
+
+function showApp() {
+  go('screen-landing');
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('auth-title').textContent = authMode === 'signin' ? 'Sign in' : 'Create account';
+  document.getElementById('auth-switch-btn').textContent = authMode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
+  if (authMode === 'signup') {
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+    errEl.style.color = '#8a8278';
+    errEl.textContent = 'Check your email to confirm your account.';
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+  }
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+}
+
+// ─── SESSION SAVING ───────────────────────────────────────────────────────────
+
+async function startSession() {
+  if (!currentUser) { go('screen-commons'); return; }
+  const { data, error } = await sb.from('sessions').insert({
+    user_id: currentUser.id,
+    mood: currentMood,
+    intention: currentIntention
+  }).select().single();
+  if (!error && data) currentSessionId = data.id;
+  go('screen-commons');
+}
+
+async function saveResponse(record) {
+  if (!currentUser) return;
+  await sb.from('responses').insert({
+    user_id: currentUser.id,
+    session_id: currentSessionId,
+    content_id: record.contentId,
+    content_title: record.title,
+    rating: record.rating || null,
+    emotions: record.emotions,
+    intensity: record.intensity || null
+  });
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='screen-viz') renderViz().catch(function(e){ console.error(e); });
+  if(id==='screen-history') renderHistory().catch(function(e){ console.error(e); });
+  if(id==='screen-commons') populateContent();
+}
+
+function selectMood(btn,mood) {
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentMood=mood;
+  setTimeout(()=>go('screen-intention'),180);
+}
+
+function selectIntention(btn,intention) {
+  document.querySelectorAll('.intention-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentIntention=intention;
+  const s=document.getElementById('session-summary');
+  if(s) s.textContent=`Feeling ${currentMood} · ${INTENTION_LABELS[intention].toLowerCase()}`;
+  setTimeout(()=>go('screen-filters'),180);
+}
+
+function toggleFilter(btn,type,value) {
+  if(type==='length'){
+    document.querySelectorAll('#length-filters .filter-chip').forEach(b=>b.classList.remove('selected'));
+    activeFilters.length=activeFilters.length===value?null:value;
+    if(activeFilters.length) btn.classList.add('selected');
+  } else {
+    document.querySelectorAll('#cat-filters .filter-chip').forEach(b=>b.classList.remove('selected'));
+    activeFilters.cat=activeFilters.cat===value?null:value;
+    if(activeFilters.cat) btn.classList.add('selected');
+  }
+}
+
+// ─── CONTENT ──────────────────────────────────────────────────────────────────
+
+function getPool() {
+  const logic=INTENTION_LOGIC[currentIntention]||INTENTION_LOGIC.meets;
+  let pool;
+  if(logic.invert){const opp=MOOD_OPPOSITES[currentMood]||'Grounded';pool=CONTENT.filter(c=>c.moods.includes(opp)&&!c.moods.includes(currentMood));if(pool.length<3)pool=CONTENT.filter(c=>!c.moods.includes(currentMood));}
+  else if(logic.useMood){pool=CONTENT.filter(c=>c.moods.includes(currentMood));}
+  else{pool=[...CONTENT];}
+  if(logic.intensityFilter)pool=pool.filter(c=>logic.intensityFilter.includes(c.intensity));
+  if(logic.highOnly)pool=pool.filter(c=>c.intensity>=2);
+  if(activeFilters.length)pool=pool.filter(c=>c.durationKey===activeFilters.length);
+  if(activeFilters.cat)pool=pool.filter(c=>c.category===activeFilters.cat);
+  if(pool.length<2)pool=CONTENT.filter(c=>c.moods.includes(currentMood));
+  return pool;
+}
+
+function getScore(item) {
+  const base=liveScores[item.id];
+  const avgRating=base.ratingSum/base.ratingCount;
+  const boost=(INTENTION_LOGIC[currentIntention]||{}).moodBoost||1.0;
+  return avgRating*(item.moods[0]===currentMood?boost:1.0)+(Math.random()*0.5);
+}
+
+function populateContent() {
+  const label=document.getElementById('commons-label');
+  if(label)label.textContent=`${currentMood} · ${(INTENTION_LABELS[currentIntention]||'').toLowerCase()}`;
+  const pool=getPool();pool.sort((a,b)=>getScore(b)-getScore(a));
+  shownContent=pool.slice(0,6);selectedContent=null;
+  const w=document.getElementById('watch-btn');
+  if(w){w.style.opacity='0.35';w.style.pointerEvents='none';}
+  renderCards();
+}
+
+function refreshContent(){populateContent();}
+
+function renderCards() {
+  const grid=document.getElementById('content-grid');
+  if(!grid)return;grid.innerHTML='';
+  if(!shownContent.length){grid.innerHTML='<p class="empty-state">No content matches those filters.</p>';return;}
+  shownContent.forEach(item=>{
+    const card=document.createElement('button');card.className='content-card';
+    card.onclick=()=>selectContent(card,item);
+    const liveI=Math.round(liveScores[item.id].intensitySum/liveScores[item.id].intensityCount);
+    card.innerHTML=`<div class="thumb"><img src="https://img.youtube.com/vi/${item.ytId}/mqdefault.jpg" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:cover;display:block;"><div class="thumb-placeholder" style="display:none"><div class="play-icon"></div></div></div><div style="flex:1;min-width:0;"><p class="card-title">${item.title}</p><div class="card-detail"><span>${item.creator} &middot; ${item.duration} &middot; ${item.category}</span><span class="intensity-pill">intensity ${liveI}</span></div><div class="card-tags">${item.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`;
+    grid.appendChild(card);
+  });
+}
+
+function selectContent(card,item) {
+  document.querySelectorAll('.content-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');selectedContent=item;
+  const w=document.getElementById('watch-btn');w.style.opacity='1';w.style.pointerEvents='auto';
+}
+
+function goWatch() {
+  if(!selectedContent)return;
+  document.getElementById('watch-title').textContent=selectedContent.title;
+  const liveI=Math.round(liveScores[selectedContent.id].intensitySum/liveScores[selectedContent.id].intensityCount);
+  document.getElementById('watch-meta').textContent=`${selectedContent.creator} · ${selectedContent.duration} · ${selectedContent.category} · intensity ${liveI}`;
+  document.getElementById('watch-embed').innerHTML=`<iframe src="https://www.youtube.com/embed/${selectedContent.ytId}?rel=0&modestbranding=1&showinfo=0" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
+  document.getElementById('feedback-title-echo').textContent=`I just watched "${selectedContent.title}."`;
+  go('screen-watch');
+}
+
+function setStar(n){currentRating=n;document.querySelectorAll('.star').forEach((s,i)=>{if(i<n)s.classList.add('lit');else s.classList.remove('lit');});}
+
+function toggleEmotion(btn) {
+  const label=btn.textContent;
+  if(btn.classList.contains('selected')){btn.classList.remove('selected');selectedEmotions=selectedEmotions.filter(e=>e!==label);}
+  else{if(selectedEmotions.length>=2)return;btn.classList.add('selected');selectedEmotions.push(label);}
+  const row=document.getElementById('intensity-row');
+  selectedEmotions.length>0?row.classList.add('visible'):row.classList.remove('visible');
+}
+
+function setIntensity(n){currentIntensity=n;document.querySelectorAll('.intensity-dot').forEach((d,i)=>{if(i<n)d.classList.add('selected');else d.classList.remove('selected');});}
+
+async async function submitFeedback() {
+  const record={contentId:selectedContent?.id,title:selectedContent?.title,mood:currentMood,intention:currentIntention,rating:currentRating,emotions:selectedEmotions,intensity:currentIntensity,timestamp:new Date().toISOString()};
+  await saveResponse(record);
+  if(selectedContent&&currentRating>0){liveScores[selectedContent.id].ratingSum+=currentRating;liveScores[selectedContent.id].ratingCount++;}
+  if(selectedContent&&currentIntensity>0){liveScores[selectedContent.id].intensitySum+=currentIntensity;liveScores[selectedContent.id].intensityCount++;}
+  selectedEmotions=[];currentRating=0;currentIntensity=0;
+  go('screen-complete');
+}
+
+// ─── VISUALIZATION ────────────────────────────────────────────────────────────
+
+async async function renderViz() {
+  // Emotion stats from DB
+  const { data: emotionData } = await sb.from('emotion_stats').select('*').order('count', { ascending: false });
+  const eEl=document.getElementById('emotion-bars');
+  if (emotionData && emotionData.length > 0) {
+    const maxE=Math.max(...emotionData.map(r=>r.count));
+    eEl.innerHTML=emotionData.map(r=>`<div class="emotion-bar-row"><span class="emotion-bar-label">${r.emotion}</span><div class="emotion-bar-track"><div class="emotion-bar-fill" style="width:${Math.round(r.count/maxE*100)}%"></div></div><span class="emotion-bar-count">${r.count}</span></div>`).join('');
+  } else {
+    eEl.innerHTML='<p class="empty-state">No responses yet.</p>';
+  }
+
+  // Mood stats from DB
+  const { data: moodData } = await sb.from('aggregate_stats').select('mood, session_count:session_count').order('session_count', { ascending: false });
+  const mEl=document.getElementById('mood-flows');
+  if (moodData && moodData.length > 0) {
+    const maxM=Math.max(...moodData.map(r=>Number(r.session_count)));
+    mEl.innerHTML=moodData.map(r=>`<div class="mood-flow-row"><span class="mood-flow-label">${r.mood}</span><div class="mood-flow-bar"><div class="mood-flow-fill" style="width:${Math.round(Number(r.session_count)/maxM*100)}%"></div></div><span class="mood-flow-count">${r.session_count}</span></div>`).join('');
+  } else {
+    mEl.innerHTML='<p class="empty-state">No sessions yet.</p>';
+  }
+
+  // Intention stats
+  const { data: intentionData } = await sb.from('aggregate_stats').select('intention, session_count').order('session_count', { ascending: false });
+  const iEl=document.getElementById('intention-flows');
+  if (intentionData && intentionData.length > 0) {
+    const seen = new Set();
+    const deduped = intentionData.filter(r => { if(seen.has(r.intention)) return false; seen.add(r.intention); return true; });
+    iEl.innerHTML=deduped.map(r=>`<div class="intention-flow-cell"><p class="intention-flow-name">${INTENTION_LABELS[r.intention]||r.intention}</p><p class="intention-flow-count">${r.session_count}</p></div>`).join('');
+  } else {
+    iEl.innerHTML='<p class="empty-state" style="grid-column:1/-1;">No sessions yet.</p>';
+  }
+
+  // Intensity drift (editorial vs crowd)
+  const { data: intensityData } = await sb.from('intensity_stats').select('*').gte('response_count', 3);
+  const dEl=document.getElementById('drift-rows');
+  const driftItems = intensityData && intensityData.length > 0 ? intensityData.map(r => {
+    const editorial = CONTENT.find(c=>c.id===r.content_id)?.intensity || 2;
+    const crowd = Math.round(r.avg_intensity);
+    const delta = crowd - editorial;
+    const arrow = delta>0?`<span class="drift-crowd drift-up">↑ ${crowd} crowd</span>`:delta<0?`<span class="drift-crowd drift-down">↓ ${crowd} crowd</span>`:`<span class="drift-crowd drift-same">= ${crowd} confirmed</span>`;
+    return `<div class="drift-row"><span class="drift-title">${r.content_title}</span><span class="drift-editorial">${editorial} editorial</span>${arrow}</div>`;
+  }) : SIM_DRIFT.map(d=>{const arrow=d.delta>0?`<span class="drift-crowd drift-up">↑ ${d.crowd} crowd</span>`:d.delta<0?`<span class="drift-crowd drift-down">↓ ${d.crowd} crowd</span>`:`<span class="drift-crowd drift-same">= ${d.crowd} confirmed</span>`;return `<div class="drift-row"><span class="drift-title">${d.title}</span><span class="drift-editorial">${d.editorial} editorial</span>${arrow}</div>`;});
+  dEl.innerHTML=driftItems.join('');
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+
+async async function renderHistory() {
+  const el=document.getElementById('history-content');
+  if (!currentUser) { el.innerHTML='<p class="empty-state">Sign in to see your history.</p>'; return; }
+  el.innerHTML='<p class="section-label">My history</p><p class="empty-state">Loading...</p>';
+
+  const { data: responses } = await sb.from('responses').select('*, sessions(mood, intention, created_at)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+
+  if (!responses || responses.length === 0) {
+    el.innerHTML=`<p class="section-label">My history</p><p style="font-size:0.85rem;color:#6a6458;font-style:italic;padding:2rem 0;">Nothing here yet. Watch something and save your response.</p><button class="btn-primary" onclick="go('screen-mood')">Go to commons</button>`;
+    return;
+  }
+
+  const moodCounts={}, intentionCounts={};
+  responses.forEach(r=>{
+    const mood=r.sessions?.mood; const intention=r.sessions?.intention;
+    if(mood) moodCounts[mood]=(moodCounts[mood]||0)+1;
+    if(intention) intentionCounts[intention]=(intentionCounts[intention]||0)+1;
+  });
+  const topMood=Object.entries(moodCounts).sort((a,b)=>b[1]-a[1])[0];
+  const topIntention=Object.entries(intentionCounts).sort((a,b)=>b[1]-a[1])[0];
+  const rated=responses.filter(r=>r.rating>0);
+  const avgRating=rated.reduce((s,r)=>s+r.rating,0)/Math.max(rated.length,1);
+
+  el.innerHTML=`
+    <p class="section-label">My history</p>
+    <div class="stat-grid">
+      <div class="stat-card"><p class="stat-num">${responses.length}</p><p class="stat-label">Watched</p></div>
+      <div class="stat-card"><p class="stat-num" style="font-size:1.1rem;padding-top:0.3rem;">${topMood?topMood[0]:'—'}</p><p class="stat-label">Top mood</p></div>
+      <div class="stat-card"><p class="stat-num">${rated.length>0?avgRating.toFixed(1):'—'}</p><p class="stat-label">Avg rating</p></div>
+    </div>
+    <p class="section-label">How I've been arriving</p>
+    <div style="margin-bottom:2rem;">${Object.entries(moodCounts).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`
+      <div class="mood-pattern-row">
+        <span class="mood-pattern-label">${m}</span>
+        <div class="mood-dots">${Array.from({length:Math.min(n,10)}).map(()=>'<div class="mood-dot filled"></div>').join('')}${Array.from({length:Math.max(10-n,0)}).map(()=>'<div class="mood-dot"></div>').join('')}</div>
+        <span style="font-size:0.65rem;color:#6a6458;margin-left:0.5rem;">${n}</span>
+      </div>`).join('')}
+    </div>
+    ${topIntention?`<p class="section-label">What I've been seeking</p><p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:#c8c2b8;margin-bottom:2rem;font-style:italic;">${INTENTION_LABELS[topIntention[0]]}</p>`:''}
+    <p class="section-label">Recent responses</p>
+    ${responses.slice(0,10).map(r=>`
+      <div class="history-entry">
+        <p class="history-title">${r.content_title||'Untitled'}</p>
+        <p class="history-meta">${r.sessions?.mood||''}${r.sessions?.intention?' · '+INTENTION_LABELS[r.sessions.intention].toLowerCase():''} · ${r.rating?'★'.repeat(r.rating):''} · ${new Date(r.created_at).toLocaleDateString()}</p>
+        ${r.emotions&&r.emotions.length?`<div class="history-emotions">${r.emotions.map(e=>`<span class="history-emotion">${e}</span>`).join('')}</div>`:''}
+      </div>`).join('')}
+    <div class="divider"></div>
+    <p style="font-size:0.68rem;color:#4a4840;line-height:1.6;">My history is stored securely and never shared without my explicit consent.</p>`;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof supabase !== 'undefined' && typeof sb !== 'undefined') {
+    initAuth().catch(function(e) {
+      console.error('Auth init failed:', e);
+      var l = document.getElementById('screen-loading');
+      if (l) l.style.display = 'none';
+      go('screen-auth');
+    });
+  } else {
+    var l = document.getElementById('screen-loading');
+    if (l) l.innerHTML = '<p style="color:#b0aaa2;font-size:0.8rem;font-family:sans-serif;padding:2rem;text-align:center;">Connection error. Please refresh.</p>';
+  }
+});
+</script>
+</body>
+</html>
