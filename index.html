@@ -457,7 +457,6 @@ async function initAuth() {
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUser = session.user;
-      await loadContent();
       showApp();
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
@@ -494,11 +493,6 @@ async function handleAuth() {
 }
 
 async function signOut() { await sb.auth.signOut(); }
-
-// ─── CONTENT LOADING ─────────────────────────────────────────
-async function loadContent() {
-  const { data, error } = await sb.from('content').select('*').eq('active', true).order('id');
-  if (!error && data) CONTENT = data;
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────
