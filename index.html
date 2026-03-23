@@ -894,6 +894,396 @@ window.addEventListener('DOMContentLoaded', function() {
     if (l) l.innerHTML = '<p style="color:#b0aaa2;font-size:0.8rem;font-family:sans-serif;padding:2rem;text-align:center;">Connection error. Please refresh.</p>';
   }
 });
+// ═══════════════════════════════════════════════════════════════
+// MOTE — YouTube Commons Search
+// Drop this <script> block into index.html before the closing </script>
+// Replace YOUR_YOUTUBE_API_KEY with your actual key locally
+// Never commit the real key to GitHub
+// ═══════════════════════════════════════════════════════════════
+
+const YT_API_KEY = 'AIzaSyAM3Lur1z-ZPaF1NF15mXjhD3qfczK9TlE';
+const MOCK = false; // set true to test without spending quota
+
+// ─────────────────────────────────────────────
+// MOOD → SEARCH QUERY MAPPING
+// Multiple queries per mood — we rotate/mix results
+// ─────────────────────────────────────────────
+const MOOD_QUERIES = {
+  unsettled: [
+    'eye opening documentary injustice',
+    'investigative documentary corruption',
+    'uncomfortable truth documentary film',
+    'social justice documentary',
+    'whistleblower documentary',
+  ],
+  moved: [
+    'emotional documentary human story',
+    'moving short film love loss',
+    'heartfelt documentary connection',
+    'tribute documentary biography',
+    'personal story documentary grief',
+  ],
+  transcendent: [
+    'breathtaking nature documentary',
+    'space universe documentary awe',
+    'time lapse earth beautiful',
+    'philosophical short film meaning',
+    'visual essay consciousness existence',
+  ],
+  energized: [
+    'triumph against all odds documentary',
+    'athlete achievement documentary',
+    'innovation breakthrough documentary',
+    'passion mastery craft documentary',
+    'comeback story documentary',
+  ],
+  intellectually_active: [
+    'ideas explained visual essay',
+    'science discovery documentary',
+    'philosophy explained documentary',
+    'how things work documentary',
+    'counterintuitive ideas explained',
+  ],
+  settled: [
+    'meditative nature documentary',
+    'slow tv calming peaceful',
+    'craft process documentary satisfying',
+    'japanese zen documentary',
+    'forest ocean nature relaxing documentary',
+  ],
+  contemplative: [
+    'reflective essay film nostalgia',
+    'meditation documentary meaning life',
+    'personal essay short film',
+    'poetic documentary slow cinema',
+    'memory identity documentary essay',
+  ],
+};
+
+// ─────────────────────────────────────────────
+// CATEGORY ALLOWLIST
+// ─────────────────────────────────────────────
+const ALLOWED_CATEGORIES = new Set([
+  '1',  // Film & Animation
+  '2',  // Autos & Vehicles
+  '15', // Pets & Animals
+  '17', // Sports
+  '18', // Short Movies
+  '22', // People & Blogs
+  '23', // Comedy
+  '24', // Entertainment
+  '25', // News & Politics
+  '27', // Education
+  '28', // Science & Technology
+  '29', // Nonprofits & Activism
+  '30', // Movies
+  '33', // Classics
+  '34', // Comedy (film)
+  '35', // Documentary
+  '36', // Drama
+  '37', // Family
+  '38', // Foreign
+]);
+
+// ─────────────────────────────────────────────
+// TITLE BLACKLIST — exact noise patterns
+// ─────────────────────────────────────────────
+const TITLE_BLACKLIST = [
+  /\breacts? to\b/i,       // "reacts to", "react to" — handled separately
+  /\bcompilation\b/i,
+  /\bbest of\b/i,
+  /\btop \d+\b/i,          // "top 10", "top 5" etc
+  /\b#shorts?\b/i,
+  /\bunboxing\b/i,
+  /\bhaul\b/i,
+  /\bprank\b/i,
+  /\bchallenge\b/i,
+  /\broast\b/i,
+  /\btrailer\b/i,
+  /\bclip\b/i,
+  /\bhighlight(s)?\b/i,
+  /\bvs\.?\b/i,
+  /\bevery episode\b/i,
+  /\bfull episode\b/i,
+  /\blive stream\b/i,
+  /\bpodcast\b/i,          // audio-first content
+];
+
+// Reaction video subject — these make "reacts to" OK
+const REACTION_WHITELIST = [
+  /professor/i, /scientist/i, /expert/i, /physicist/i,
+  /historian/i, /philosopher/i, /researcher/i, /doctor/i,
+  /engineer/i, /architect/i, /musician/i, /composer/i,
+  /reacts to.*claim/i, /reacts to.*theory/i, /reacts to.*argument/i,
+  /reacts to.*research/i, /reacts to.*paper/i, /reacts to.*study/i,
+];
+
+// ─────────────────────────────────────────────
+// MEME / IRONY COMMENT SCORING
+// ─────────────────────────────────────────────
+const MEME_SIGNALS = [
+  /\bunironically\b/i, /\bpov:/i, /\bnobody:/i, /\bme:/i,
+  /\bthe algorithm\b/i, /\b3am\b/i, /\bat 3\b/i,
+  /\bpeak (cinema|content|comedy)\b/i,
+  /\bshakespeare could never\b/i, /\boscar worthy\b/i,
+  /\bgoated\b/i, /\bbased\b/i, /\bslaps\b/i,
+  /\bratio\b/i, /\bbuilt different\b/i, /\bno cap\b/i,
+  /\bI can't believe this exists\b/i,
+  /\bwhy am I (watching|crying|here)\b/i,
+  /\bI hate (myself|that I)\b/i,
+];
+
+const SINCERE_SIGNALS = [
+  /had to pause/i, /couldn't finish/i, /had to stop/i,
+  /\bchills\b/i, /\bgoosebumps\b/i, /\bspeechless\b/i,
+  /\bi('m| am) crying\b/i, /\btears\b/i,
+  /showed (this|it) to/i, /sent this to/i, /watching (this )?with/i,
+  /changed (my|how I)/i, /never (thought|considered|knew)/i,
+  /came at the right time/i, /needed this/i,
+  /\bmy (mom|dad|mother|father|partner|wife|husband|friend)\b/i,
+  /everyone (needs|should) (to )?(see|watch)/i,
+  /should be required/i, /please (watch|share)/i,
+];
+
+function scoreMemeVsSincere(comments) {
+  let memeScore = 0;
+  let sincereScore = 0;
+  comments.forEach(text => {
+    MEME_SIGNALS.forEach(r => { if (r.test(text)) memeScore += 2; });
+    SINCERE_SIGNALS.forEach(r => { if (r.test(text)) sincereScore += 2; });
+  });
+  const total = memeScore + sincereScore;
+  if (total === 0) return { type: 'neutral', memeRatio: 0, sincereRatio: 0 };
+  const memeRatio = memeScore / total;
+  return {
+    type: memeRatio > 0.6 ? 'meme' : memeRatio > 0.35 ? 'mixed' : 'sincere',
+    memeRatio: Math.round(memeRatio * 100),
+    sincereRatio: Math.round((1 - memeRatio) * 100),
+  };
+}
+
+// Stolen/low-value comment signals
+const STOLEN_SIGNALS = [
+  /\bstolen\b/i, /\bcopied\b/i, /\bscam\b/i,
+  /\bgive credit\b/i, /\boriginal (is|was|video)\b/i,
+  /\bwithout (permission|credit)\b/i,
+  /\bthis isn't (your|their)\b/i,
+  /\brepost\b/i, /\bcopyright\b/i,
+];
+
+function hasStolentSignals(comments) {
+  let count = 0;
+  comments.forEach(text => {
+    STOLEN_SIGNALS.forEach(r => { if (r.test(text)) count++; });
+  });
+  return count / Math.max(comments.length, 1) > 0.05; // >5% theft comments = flag
+}
+
+// ─────────────────────────────────────────────
+// TITLE FILTER
+// ─────────────────────────────────────────────
+function passesTitle(title) {
+  // Check reaction whitelist first
+  if (/\breacts? to\b/i.test(title)) {
+    return REACTION_WHITELIST.some(r => r.test(title));
+  }
+  // Check blacklist
+  return !TITLE_BLACKLIST.some(r => r.test(title));
+}
+
+// ─────────────────────────────────────────────
+// DURATION PARSE — ISO 8601 to minutes
+// ─────────────────────────────────────────────
+function parseDuration(iso) {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const h = parseInt(match[1] || 0);
+  const m = parseInt(match[2] || 0);
+  const s = parseInt(match[3] || 0);
+  return h * 60 + m + s / 60;
+}
+
+// ─────────────────────────────────────────────
+// MAIN SEARCH FUNCTION
+// ─────────────────────────────────────────────
+async function searchYouTubeForMood(mood, maxResults = 10) {
+  if (MOCK) return getMockResults(mood);
+
+  const queries = MOOD_QUERIES[mood] || MOOD_QUERIES.intellectually_active;
+  // Pick a random query from the mood's list for variety
+  const query = queries[Math.floor(Math.random() * queries.length)];
+
+  // LAYER 1 — search
+  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+  searchUrl.searchParams.set('part', 'snippet');
+  searchUrl.searchParams.set('q', query);
+  searchUrl.searchParams.set('type', 'video');
+  searchUrl.searchParams.set('maxResults', '25'); // fetch more, filter down
+  searchUrl.searchParams.set('safeSearch', 'strict');
+  searchUrl.searchParams.set('relevanceLanguage', 'en');
+  searchUrl.searchParams.set('key', YT_API_KEY);
+
+  const searchResp = await fetch(searchUrl.toString());
+  const searchData = await searchResp.json();
+  if (!searchData.items) return [];
+
+  const videoIds = searchData.items.map(i => i.id.videoId).join(',');
+
+  // LAYER 2 — get video details (duration, stats, category)
+  const detailUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+  detailUrl.searchParams.set('part', 'contentDetails,statistics,snippet,status');
+  detailUrl.searchParams.set('id', videoIds);
+  detailUrl.searchParams.set('key', YT_API_KEY);
+
+  const detailResp = await fetch(detailUrl.toString());
+  const detailData = await detailResp.json();
+  if (!detailData.items) return [];
+
+  // LAYER 3 — filter
+  const filtered = detailData.items.filter(video => {
+    const title       = video.snippet.title;
+    const duration    = parseDuration(video.contentDetails.duration);
+    const categoryId  = video.snippet.categoryId;
+    const embeddable  = video.status.embeddable;
+    const viewCount   = parseInt(video.statistics.viewCount || 0);
+    const likeCount   = parseInt(video.statistics.likeCount || 0);
+    const commentCount= parseInt(video.statistics.commentCount || 0);
+
+    if (!embeddable)                          return false; // must be embeddable
+    if (duration < 15)                        return false; // 15min minimum
+    if (!ALLOWED_CATEGORIES.has(categoryId))  return false; // category check
+    if (!passesTitle(title))                  return false; // title blacklist
+    if (viewCount < 10000)                    return false; // noise floor
+    if (commentCount < 50)                    return false; // need comment signal
+    const likeRatio = likeCount / Math.max(viewCount, 1);
+    if (likeRatio < 0.01)                     return false; // quality floor
+
+    return true;
+  });
+
+  // LAYER 4 — shape results for Mote
+  return filtered.slice(0, maxResults).map(video => ({
+    id:             video.id,
+    title:          video.snippet.title,
+    creator:        video.snippet.channelTitle,
+    description:    video.snippet.description.slice(0, 200),
+    yt_id:          video.id,
+    duration_mins:  Math.round(parseDuration(video.contentDetails.duration)),
+    duration_label: `${Math.round(parseDuration(video.contentDetails.duration))}m`,
+    duration_bucket: parseDuration(video.contentDetails.duration) < 20
+                      ? 'short'
+                      : parseDuration(video.contentDetails.duration) < 40
+                        ? 'medium' : 'long',
+    category:       video.snippet.categoryId,
+    view_count:     parseInt(video.statistics.viewCount),
+    like_count:     parseInt(video.statistics.likeCount),
+    comment_count:  parseInt(video.statistics.commentCount),
+    moods:          [mood], // seed mood — comment scorer will expand this
+    intensity:      '2',   // default — crowd will calibrate
+    tags:           video.snippet.tags ? video.snippet.tags.slice(0, 5) : [],
+    source:         'api', // distinguish from curated seed content
+  }));
+}
+
+// ─────────────────────────────────────────────
+// COMMENT SCORER — run after surfacing a video
+// Costs 1 quota unit per call
+// ─────────────────────────────────────────────
+async function scoreVideoComments(ytId) {
+  if (MOCK) return { type: 'sincere', memeRatio: 10, sincereRatio: 90 };
+
+  const url = new URL('https://www.googleapis.com/youtube/v3/commentThreads');
+  url.searchParams.set('part', 'snippet');
+  url.searchParams.set('videoId', ytId);
+  url.searchParams.set('maxResults', '100');
+  url.searchParams.set('order', 'relevance');
+  url.searchParams.set('key', YT_API_KEY);
+
+  try {
+    const resp = await fetch(url.toString());
+    const data = await resp.json();
+    if (!data.items) return { type: 'neutral', memeRatio: 50, sincereRatio: 50 };
+
+    const comments = data.items.map(i =>
+      i.snippet.topLevelComment.snippet.textDisplay
+    );
+
+    const score = scoreMemeVsSincere(comments);
+    score.stolen = hasStolentSignals(comments);
+    return score;
+  } catch(e) {
+    return { type: 'neutral', memeRatio: 50, sincereRatio: 50 };
+  }
+}
+
+// ─────────────────────────────────────────────
+// MOCK DATA — realistic fake results for testing
+// ─────────────────────────────────────────────
+function getMockResults(mood) {
+  const mocks = {
+    unsettled: [
+      { id:'mock1', title:'The Corporation (2003)', creator:'Mark Achbar', yt_id:'mock1',
+        duration_label:'145m', duration_bucket:'long', moods:['unsettled'], intensity:'3',
+        tags:['corporate','power','society'], source:'api', view_count:2400000 },
+      { id:'mock2', title:'Dirty Money — Drug Short', creator:'Netflix Documentary', yt_id:'mock2',
+        duration_label:'45m', duration_bucket:'long', moods:['unsettled'], intensity:'3',
+        tags:['finance','corruption','power'], source:'api', view_count:890000 },
+    ],
+    moved: [
+      { id:'mock3', title:'The Biggest Little Farm', creator:'John Chester', yt_id:'mock3',
+        duration_label:'91m', duration_bucket:'long', moods:['moved','settled'], intensity:'2',
+        tags:['farming','nature','life'], source:'api', view_count:1200000 },
+    ],
+    transcendent: [
+      { id:'mock4', title:'Samsara (2011) — selected scenes', creator:'Ron Fricke', yt_id:'mock4',
+        duration_label:'102m', duration_bucket:'long', moods:['transcendent'], intensity:'2',
+        tags:['visual','world','humanity'], source:'api', view_count:3400000 },
+    ],
+    energized: [
+      { id:'mock5', title:'Free Solo — full documentary', creator:'National Geographic', yt_id:'mock5',
+        duration_label:'100m', duration_bucket:'long', moods:['energized','transcendent'], intensity:'2',
+        tags:['climbing','achievement','obsession'], source:'api', view_count:5600000 },
+    ],
+    intellectually_active: [
+      { id:'mock6', title:'The Social Dilemma', creator:'Jeff Orlowski', yt_id:'mock6',
+        duration_label:'94m', duration_bucket:'long', moods:['intellectually_active','unsettled'], intensity:'2',
+        tags:['technology','attention','society'], source:'api', view_count:8900000 },
+    ],
+    settled: [
+      { id:'mock7', title:'Slow TV: Norwegian Train Journey', creator:'NRK', yt_id:'mock7',
+        duration_label:'480m', duration_bucket:'long', moods:['settled'], intensity:'1',
+        tags:['slow tv','nature','norway'], source:'api', view_count:4500000 },
+    ],
+    contemplative: [
+      { id:'mock8', title:'Agnes Varda — The Gleaners', creator:'Criterion', yt_id:'mock8',
+        duration_label:'82m', duration_bucket:'long', moods:['contemplative','moved'], intensity:'2',
+        tags:['memory','society','art'], source:'api', view_count:340000 },
+    ],
+  };
+  return mocks[mood] || mocks.intellectually_active;
+}
+
+// ─────────────────────────────────────────────
+// INTEGRATION — how this plugs into the Commons
+// Replace or extend the existing populateContent()
+// ─────────────────────────────────────────────
+
+// Call this to get live content for the Commons pool
+// Merges API results with curated seed content
+async function getLivePool(mood, intention) {
+  // Always include curated content
+  const curated = CONTENT.filter(c => c.moods && c.moods.includes(mood));
+
+  try {
+    // Get API results for this mood
+    const apiResults = await searchYouTubeForMood(mood, 6);
+    // Merge — curated first, API results fill remaining slots
+    return [...curated, ...apiResults];
+  } catch(e) {
+    console.error('API search failed, falling back to curated:', e);
+    return curated;
+  }
+}
 </script>
 </body>
 </html>
