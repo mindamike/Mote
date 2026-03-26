@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mote</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script src="mote_content.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-weight: 300; background: linear-gradient(135deg, #1a1a18 0%, #0e0e0d 45%, #0a0a09 100%); min-height: 100vh; }
+.screen { display: none; min-height: 100vh; padding: 3rem 2rem; max-width: 680px; margin: 0 auto; flex-direction: column; justify-content: center; }
+.screen.active { display: flex; }
+.screen.top { justify-content: flex-start; padding-top: 3rem; }
+.wordmark { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 1.1rem; letter-spacing: 0.35em; text-transform: uppercase; color: #8a8278; margin-bottom: 4rem; }
+.tagline { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 300; line-height: 1.2; color: #e8e4dc; margin-bottom: 1.5rem; }
+.tagline em { font-style: italic; color: #b5a99a; }
+.sub { font-size: 0.9rem; color: #b0aaa2; line-height: 1.7; max-width: 420px; margin-bottom: 3.5rem; }
+.section-label { font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase; color: #b0aaa2; margin-bottom: 2rem; }
+.section-question { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; color: #c8c2b8; margin-bottom: 2rem; line-height: 1.3; }
+.mood-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 3rem; }
+.intention-grid { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 3rem; }
+.filter-row { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.content-grid { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2.5rem; }
+.star-row { display: flex; gap: 0.6rem; margin-bottom: 2rem; }
+.btn-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.divider { height: 1px; background: #2a2820; margin: 2rem 0; }
+.star { width: 32px; height: 32px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+.star svg { transition: all 0.15s ease; }
+.star:hover svg path, .star.lit svg path { fill: #c8a87a; stroke: #c8a87a; }
+.thumb { width: 90px; height: 58px; background: #1e1d1b; flex-shrink: 0; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.play-icon { width: 0; height: 0; border-style: solid; border-width: 7px 0 7px 12px; border-color: transparent transparent transparent #6a6458; }
+button.mood-btn { padding: 1.4rem 1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 300; cursor: pointer; text-align: left; transition: all 0.2s ease; width: 100%; }
+button.mood-btn:hover { border-color: #8a8278; background: #222018; }
+button.mood-btn.selected { border-color: #c8c2b8; background: #222018; }
+span.mood-desc { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 300; color: #b0aaa2; letter-spacing: 0.05em; margin-top: 0.4rem; }
+button.intention-btn { padding: 1.2rem 1.4rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 300; cursor: pointer; text-align: left; transition: all 0.2s ease; width: 100%; }
+button.intention-btn:hover { border-color: #8a8278; background: #222018; }
+button.intention-btn.selected { border-color: #c8c2b8; background: #222018; }
+span.intention-desc { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 300; color: #b0aaa2; letter-spacing: 0.04em; margin-top: 0.3rem; }
+button.filter-chip { padding: 0.55rem 1.1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 300; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s ease; }
+button.filter-chip:hover { border-color: #8a8278; background: #222018; }
+button.filter-chip.selected { border-color: #c8c2b8; background: #222018; }
+button.ck-btn { padding: 0.65rem 1.1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 300; cursor: pointer; transition: all 0.2s ease; letter-spacing: 0.04em; }
+button.ck-btn:hover { border-color: #8a8278; background: #222018; }
+button.ck-btn.selected { border-color: #c8c2b8; background: #222018; }
+button.content-card { display: flex; gap: 1.2rem; padding: 1.1rem; border: 1px solid #383428; background: #141410; cursor: pointer; text-align: left; width: 100%; align-items: flex-start; transition: all 0.2s ease; }
+button.content-card:hover { border-color: #6a6458; background: #1c1c18; }
+button.content-card.selected { border-color: #c8c2b8; background: #1c1c18; }
+button.btn-primary { display: inline-block; padding: 0.85rem 2.2rem; border: 1px solid #6a6458; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase; background: transparent; cursor: pointer; transition: all 0.25s ease; }
+button.btn-primary:hover { border-color: #c8c2b8; background: rgba(200,194,184,0.08); }
+button.btn-small { padding: 0.5rem 1.2rem; border: 1px solid #555048; color: #b0aaa2; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; background: transparent; cursor: pointer; transition: all 0.2s ease; }
+button.btn-small:hover { border-color: #8a8278; color: #e8e4dc; }
+button.nav-back { background: none; border: none; color: #b0aaa2; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; padding: 0; margin-bottom: 2.5rem; transition: color 0.2s; }
+button.nav-back:hover { color: #e8e4dc; }
+.card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 400; color: #e8e4dc; line-height: 1.3; margin-bottom: 0.25rem; }
+.card-detail { font-size: 0.72rem; color: #b0aaa2; letter-spacing: 0.04em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.intensity-pill { font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: #3a3428; background: #d8d2c8; padding: 0.12rem 0.45rem; font-family: 'DM Sans', sans-serif; font-weight: 400; flex-shrink: 0; }
+.card-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.tag { font-size: 0.63rem; letter-spacing: 0.07em; color: #b0aaa2; border: 1px solid #383428; padding: 0.12rem 0.4rem; text-transform: uppercase; }
+.watch-area { background: #0a0a09; aspect-ratio: 16/9; width: 100%; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; }
+.watch-area iframe { width: 100%; height: 100%; border: none; }
+.feedback-prompt { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-style: italic; color: #c8c2b8; margin-bottom: 1.8rem; line-height: 1.5; }
+.complete-msg { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 300; font-style: italic; color: #c8c2b8; margin-bottom: 0.75rem; }
+.complete-sub { font-size: 0.82rem; color: #b0aaa2; line-height: 1.6; margin-bottom: 2.5rem; }
+.empty-state { font-size: 0.85rem; color: #6a6458; font-style: italic; padding: 2rem 0; text-align: center; }
+.nav-bar { display: flex; gap: 1.5rem; margin-bottom: 3rem; }
+.nav-item { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6458; cursor: pointer; background: none; border: none; padding: 0; transition: color 0.2s; font-family: 'DM Sans', sans-serif; }
+.nav-item:hover, .nav-item.active { color: #b0aaa2; }
+.session-summary { font-size: 0.75rem; color: #6a6458; margin-bottom: 2rem; font-style: italic; letter-spacing: 0.03em; }
+.shift-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8278; border: 1px solid #2a2820; padding: 0.3rem 0.7rem; margin-bottom: 1.5rem; }
+.shift-arrow { color: #c8a87a; }
+.viz-block { margin-bottom: 2.5rem; }
+.viz-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 400; color: #c8c2b8; margin-bottom: 0.3rem; }
+.viz-sub { font-size: 0.75rem; color: #6a6458; margin-bottom: 1.2rem; letter-spacing: 0.03em; line-height: 1.5; }
+.bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.bar-label { font-size: 0.72rem; color: #b0aaa2; width: 110px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 4px; background: #1e1d1b; }
+.bar-fill { height: 100%; background: #8a8278; }
+.bar-count { font-size: 0.68rem; color: #6a6458; width: 30px; text-align: right; flex-shrink: 0; }
+.shift-matrix { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+.shift-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.8rem; border: 1px solid #1e1d1b; background: #0f0f0d; }
+.shift-from { font-size: 0.72rem; color: #6a6458; width: 110px; flex-shrink: 0; }
+.shift-to { font-size: 0.72rem; color: #c8c2b8; flex: 1; }
+.shift-pct { font-size: 0.68rem; color: #6a6458; }
+.drift-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #1e1d1b; }
+.drift-title { font-size: 0.78rem; color: #c8c2b8; flex: 1; font-family: 'Cormorant Garamond', serif; }
+.drift-editorial { font-size: 0.65rem; color: #6a6458; letter-spacing: 0.06em; }
+.drift-crowd { font-size: 0.65rem; letter-spacing: 0.06em; }
+.drift-up { color: #c8a87a; }
+.drift-same { color: #6a6458; }
+.drift-down { color: #8a9a8a; }
+.privacy-note { font-size: 0.68rem; color: #4a4840; line-height: 1.6; border-top: 1px solid #1e1d1b; padding-top: 1.5rem; margin-top: 1rem; }
+.history-entry { padding: 1rem; border: 1px solid #2a2820; background: #141410; margin-bottom: 0.6rem; }
+.history-title { font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: #c8c2b8; margin-bottom: 0.3rem; }
+.history-meta { font-size: 0.68rem; color: #6a6458; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+.history-shift { font-size: 0.68rem; color: #8a8278; margin-bottom: 0.4rem; }
+.history-ck { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.ck-tag { font-size: 0.62rem; letter-spacing: 0.07em; color: #8a8278; border: 1px solid #2a2820; padding: 0.1rem 0.4rem; text-transform: uppercase; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 2rem; }
+.stat-card { background: #141410; border: 1px solid #2a2820; padding: 1rem; }
+.stat-num { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: #c8c2b8; line-height: 1; margin-bottom: 0.25rem; }
+.stat-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6a6458; }
+.auth-form { display: flex; flex-direction: column; gap: 1rem; max-width: 360px; margin-bottom: 2rem; }
+.auth-input { padding: 0.85rem 1rem; border: 1px solid #555048; background: #181814; color: #e8e4dc; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 300; outline: none; transition: border-color 0.2s; width: 100%; }
+.auth-input:focus { border-color: #8a8278; }
+.auth-input::placeholder { color: #4a4540; }
+.auth-switch { font-size: 0.78rem; color: #6a6458; cursor: pointer; background: none; border: none; padding: 0; font-family: 'DM Sans', sans-serif; transition: color 0.2s; text-align: left; }
+.auth-switch:hover { color: #b0aaa2; }
+.auth-error { font-size: 0.75rem; color: #c8a87a; margin-top: 0.5rem; min-height: 1rem; }
+.auth-note { font-size: 0.72rem; color: #4a4540; line-height: 1.6; margin-top: 1rem; max-width: 360px; }
+.user-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3rem; }
+.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.loading-dot { width: 6px; height: 6px; background: #4a4540; border-radius: 50%; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="screen-loading">
+  <div class="loading-dot"></div>
+</div>
+
+<!-- AUTH -->
+<div class="screen" id="screen-auth">
+  <div style="margin-bottom:3.5rem;">
+    <svg width="180" height="100" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(-28 0)">
+        <g fill="none" stroke="#b0aaa2" stroke-width="1.5" stroke-linecap="round">
+          <path d="M 51.9 28.0 A 44 44 0 0 1 128.1 28.0"/>
+          <path d="M 128.1 72.0 A 44 44 0 0 1 51.9 72.0"/>
+        </g>
+        <text font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="300" letter-spacing="4" fill="#c8c2b8" text-anchor="middle" dominant-baseline="middle" x="90" y="52">MOTE</text>
+        <circle cx="80" cy="48" r="5.5" fill="#0e0e0d"/>
+        <circle cx="80" cy="48" r="2.8" fill="#b0aaa2"/>
+      </g>
+    </svg>
+  </div>
+  <p class="section-question" id="auth-title">Sign in</p>
+  <div class="auth-form">
+    <input class="auth-input" type="email" id="auth-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-input" type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+    <div class="auth-error" id="auth-error"></div>
+    <button class="btn-primary" onclick="handleAuth()">Continue</button>
+    <button class="auth-switch" id="auth-switch-btn" onclick="toggleAuthMode()">Don't have an account? Sign up</button>
+  </div>
+  <p class="auth-note">Mote remembers your emotional history across sessions. Your data is never shared.</p>
+</div>
+
+<!-- LANDING -->
+<div class="screen" id="screen-landing">
+  <div style="margin-bottom:3.5rem;">
+    <svg width="180" height="100" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(-28 0)">
+        <g fill="none" stroke="#b0aaa2" stroke-width="1.5" stroke-linecap="round">
+          <path d="M 51.9 28.0 A 44 44 0 0 1 128.1 28.0"/>
+          <path d="M 128.1 72.0 A 44 44 0 0 1 51.9 72.0"/>
+        </g>
+        <text font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="300" letter-spacing="4" fill="#c8c2b8" text-anchor="middle" dominant-baseline="middle" x="90" y="52">MOTE</text>
+        <circle cx="80" cy="48" r="5.5" fill="#0e0e0d"/>
+        <circle cx="80" cy="48" r="2.8" fill="#b0aaa2"/>
+      </g>
+    </svg>
+  </div>
+  <h1 class="tagline">Watch.<br><em>Feel.</em><br>Know yourself.</h1>
+  <p class="sub">Intentional viewing. Honest emotional logging. No algorithm deciding how you should feel.</p>
+  <div class="btn-row">
+    <button class="btn-primary" onclick="go('screen-mood')">Begin</button>
+    <button class="btn-small" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+</div>
+
+<!-- STEP 1: ARRIVAL MOOD -->
+<div class="screen" id="screen-mood">
+  <div class="user-bar">
+    <div class="nav-bar" style="margin-bottom:0;">
+      <button class="nav-item active">Commons</button>
+      <button class="nav-item" onclick="go('screen-history')">My history</button>
+      <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+    </div>
+    <button class="auth-switch" onclick="signOut()" style="font-size:0.65rem;">Sign out</button>
+  </div>
+  <p class="section-label">Arriving as</p>
+  <p class="section-question">How am I feeling right now?</p>
+
+  <!-- Simple mood grid -->
+  <div class="mood-grid" id="simple-mood-grid">
+    <button class="mood-btn" onclick="selectMood(this,'unsettled')">Unsettled<span class="mood-desc">Anxious, provoked, seeking</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'moved')">Moved<span class="mood-desc">Tender, grieving, open</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'transcendent')">Transcendent<span class="mood-desc">Awestruck, vast, beyond words</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'energized')">Energized<span class="mood-desc">Alive, momentum, joy</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'intellectually_active')">Intellectually active<span class="mood-desc">Curious, engaged, thinking</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'settled')">Settled<span class="mood-desc">Calm, restored, at rest</span></button>
+    <button class="mood-btn" onclick="selectMood(this,'contemplative')" style="grid-column:span 2;text-align:center;">Contemplative<span class="mood-desc" style="text-align:center;">Pensive, reflective, inward</span></button>
+    <button id="mixed-toggle" onclick="toggleMixed()" class="mood-btn" style="grid-column:span 2;text-align:center;color:#6a6458;border-color:#383428;">Mixed feelings<span class="mood-desc" style="text-align:center;">More than one thing at once</span></button>
+  </div>
+
+  <!-- Mixed feelings picker — hidden by default -->
+  <div id="mixed-picker" style="display:none;margin-top:1.5rem;">
+    <p class="section-label" style="margin-bottom:1rem;">Choose up to 3 — weighted left to right</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+
+      <!-- Column 1 — primary -->
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:#c8a87a;margin-bottom:0.5rem;">Primary</p>
+        <select id="mixed-1-mood" onchange="updateMixedSub(1)" style="width:100%;padding:0.75rem 0.5rem;background:#181814;border:1px solid #555048;color:#e8e4dc;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:300;cursor:pointer;outline:none;margin-bottom:0.5rem;">
+          <option value="">— select —</option>
+          <option value="unsettled">Unsettled</option>
+          <option value="moved">Moved</option>
+          <option value="transcendent">Transcendent</option>
+          <option value="energized">Energized</option>
+          <option value="intellectually_active">Intellectually active</option>
+          <option value="settled">Settled</option>
+          <option value="contemplative">Contemplative</option>
+        </select>
+        <select id="mixed-1-sub" style="width:100%;padding:0.6rem 0.5rem;background:#0f0f0d;border:1px solid #383428;color:#b0aaa2;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:300;cursor:pointer;outline:none;display:none;">
+          <option value="">— refine —</option>
+        </select>
+      </div>
+
+      <!-- Column 2 — secondary -->
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:#8a8278;margin-bottom:0.5rem;">Secondary</p>
+        <select id="mixed-2-mood" onchange="updateMixedSub(2)" style="width:100%;padding:0.75rem 0.5rem;background:#181814;border:1px solid #383428;color:#c8c2b8;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:300;cursor:pointer;outline:none;margin-bottom:0.5rem;">
+          <option value="">— select —</option>
+          <option value="unsettled">Unsettled</option>
+          <option value="moved">Moved</option>
+          <option value="transcendent">Transcendent</option>
+          <option value="energized">Energized</option>
+          <option value="intellectually_active">Intellectually active</option>
+          <option value="settled">Settled</option>
+          <option value="contemplative">Contemplative</option>
+        </select>
+        <select id="mixed-2-sub" style="width:100%;padding:0.6rem 0.5rem;background:#0f0f0d;border:1px solid #383428;color:#b0aaa2;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:300;cursor:pointer;outline:none;display:none;">
+          <option value="">— refine —</option>
+        </select>
+      </div>
+
+      <!-- Column 3 — tertiary -->
+      <div>
+        <p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:#4a4840;margin-bottom:0.5rem;">Tertiary</p>
+        <select id="mixed-3-mood" onchange="updateMixedSub(3)" style="width:100%;padding:0.75rem 0.5rem;background:#181814;border:1px solid #383428;color:#8a8278;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:300;cursor:pointer;outline:none;margin-bottom:0.5rem;">
+          <option value="">— select —</option>
+          <option value="unsettled">Unsettled</option>
+          <option value="moved">Moved</option>
+          <option value="transcendent">Transcendent</option>
+          <option value="energized">Energized</option>
+          <option value="intellectually_active">Intellectually active</option>
+          <option value="settled">Settled</option>
+          <option value="contemplative">Contemplative</option>
+        </select>
+        <select id="mixed-3-sub" style="width:100%;padding:0.6rem 0.5rem;background:#0f0f0d;border:1px solid #383428;color:#6a6458;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:300;cursor:pointer;outline:none;display:none;">
+          <option value="">— refine —</option>
+        </select>
+      </div>
+
+    </div>
+    <button class="btn-primary" onclick="confirmMixed()">Continue</button>
+  </div>
+</div>
+
+<!-- STEP 2: INTENTION -->
+<div class="screen" id="screen-intention">
+  <div class="nav-bar">
+    <button class="nav-item active">Commons</button>
+    <button class="nav-item" onclick="go('screen-history')">My history</button>
+    <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+  <p class="section-question">I want content that:</p>
+  <div class="intention-grid">
+    <button class="intention-btn" onclick="selectIntention(this,'meets')">Meets me where I am<span class="intention-desc">Content that matches my current emotional state</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'through')">Helps me think through it<span class="intention-desc">Intellectually engaged with what I'm feeling</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'different')">Pulls me somewhere different<span class="intention-desc">A deliberate shift in emotional direction</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'breathe')">Gives me room to breathe<span class="intention-desc">Lower intensity, lighter engagement</span></button>
+    <button class="intention-btn" onclick="selectIntention(this,'challenges')">Challenges me<span class="intention-desc">Demanding content regardless of my current state</span></button>
+  </div>
+</div>
+
+<!-- MID-SESSION INTENTION (reuses departure mood, stays in session) -->
+<div class="screen" id="screen-intention-mid">
+  <div class="wordmark">Mote</div>
+  <p id="mid-intention-context" style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-style:italic;color:#6a6458;margin-bottom:2rem;"></p>
+  <p class="section-question">Now I want content that:</p>
+  <div class="intention-grid">
+    <button class="intention-btn" onclick="selectMidIntention(this,'meets')">Meets me where I am<span class="intention-desc">Content that matches my current emotional state</span></button>
+    <button class="intention-btn" onclick="selectMidIntention(this,'through')">Helps me think through it<span class="intention-desc">Intellectually engaged with what I'm feeling</span></button>
+    <button class="intention-btn" onclick="selectMidIntention(this,'different')">Pulls me somewhere different<span class="intention-desc">A deliberate shift in emotional direction</span></button>
+    <button class="intention-btn" onclick="selectMidIntention(this,'breathe')">Gives me room to breathe<span class="intention-desc">Lower intensity, lighter engagement</span></button>
+    <button class="intention-btn" onclick="selectMidIntention(this,'challenges')">Challenges me<span class="intention-desc">Demanding content regardless of my current state</span></button>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="screen" id="screen-filters">
+  <button class="nav-back" onclick="go('screen-intention')">← Back</button>
+  <p class="session-summary" id="session-summary"></p>
+  <p class="section-label">Optional filters</p>
+  <div class="filter-row" id="length-filters">
+    <button class="filter-chip" onclick="toggleFilter(this,'length','short')">Short &lt;15m</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'length','medium')">Medium 15–40m</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'length','long')">Long 40m+</button>
+  </div>
+  <div class="filter-row" id="cat-filters">
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Film')">Film</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Science')">Science</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Philosophy')">Philosophy</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Nature')">Nature</button>
+    <button class="filter-chip" onclick="toggleFilter(this,'cat','Visual Essay')">Visual Essay</button>
+  </div>
+  <button class="btn-primary" onclick="startSession()">Show me content</button>
+</div>
+
+<!-- COMMONS -->
+<div class="screen" id="screen-commons">
+  <button class="nav-back" onclick="go('screen-mood')">← Start over</button>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.5rem;">
+    <p class="section-label" style="margin-bottom:0;">The Commons</p>
+    <span style="display:flex;align-items:center;gap:1rem;">
+      <button onclick="go('screen-intention-mid')" style="background:none;border:none;font-family:'DM Sans',sans-serif;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:#4a4840;cursor:pointer;padding:0;transition:color 0.2s;" onmouseover="this.style.color='#b0aaa2'" onmouseout="this.style.color='#4a4840'">New frame</button>
+      <span id="commons-label" style="font-family:'Cormorant Garamond',serif;font-size:0.85rem;font-style:italic;color:#6a6458;"></span>
+    </span>
+  </div>
+  <div class="divider" style="margin-top:0.75rem;margin-bottom:1.5rem;"></div>
+  <div class="content-grid" id="content-grid"></div>
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <button class="btn-primary" id="watch-btn" onclick="goWatch()" style="opacity:0.35;pointer-events:none;">Watch selected</button>
+    <button class="btn-small" onclick="refreshContent()">Refresh</button>
+  </div>
+</div>
+
+<!-- WATCH -->
+<div class="screen" id="screen-watch">
+  <button class="nav-back" onclick="go('screen-commons')">← Back to commons</button>
+  <div class="watch-area" id="watch-embed"><div style="color:#555048;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;">Loading</div></div>
+  <p style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;color:#e8e4dc;margin-bottom:0.4rem;" id="watch-title"></p>
+  <p style="font-size:0.75rem;color:#b0aaa2;margin-bottom:2rem;letter-spacing:0.04em;" id="watch-meta"></p>
+  <div class="divider"></div>
+  <button class="btn-primary" onclick="finishedWatching()">I've finished watching</button>
+</div>
+
+<!-- COMPLETE -->
+<div class="screen" id="screen-complete">
+  <div class="wordmark">Mote</div>
+  <p class="complete-msg">Logged.</p>
+  <div id="complete-shift" style="margin-bottom:1rem;"></div>
+
+  <!-- Star rating — lightweight, always visible -->
+  <div style="margin-bottom:2rem;">
+    <p class="section-label" style="margin-bottom:0.75rem;">Rate it</p>
+    <div class="star-row">
+      <button class="star" onclick="setStar(1)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+      <button class="star" onclick="setStar(2)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+      <button class="star" onclick="setStar(3)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+      <button class="star" onclick="setStar(4)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+      <button class="star" onclick="setStar(5)"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="#6a6458" stroke-width="1.5"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Primary actions -->
+  <div class="btn-row" style="margin-bottom:2rem;">
+    <button class="btn-primary" onclick="watchSomethingElse()">Watch something else</button>
+    <button class="btn-small" onclick="toggleReflect()">Reflect</button>
+  </div>
+
+  <!-- Reflect panel — hidden by default -->
+  <div id="reflect-panel" style="display:none;border-top:1px solid #2a2820;padding-top:2rem;">
+
+    <!-- Departure mood -->
+    <p class="section-label" style="margin-bottom:1rem;">How do I feel now?</p>
+    <div class="mood-grid" id="reflect-departure-grid" style="margin-bottom:1.5rem;">
+      <button class="mood-btn" onclick="selectReflectMood(this,'unsettled')">Unsettled<span class="mood-desc">Anxious, provoked, seeking</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'moved')">Moved<span class="mood-desc">Tender, grieving, open</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'transcendent')">Transcendent<span class="mood-desc">Awestruck, vast, beyond words</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'energized')">Energized<span class="mood-desc">Alive, momentum, joy</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'intellectually_active')">Intellectually active<span class="mood-desc">Curious, engaged, thinking</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'settled')">Settled<span class="mood-desc">Calm, restored, at rest</span></button>
+      <button class="mood-btn" onclick="selectReflectMood(this,'contemplative')" style="grid-column:span 2;text-align:center;">Contemplative<span class="mood-desc" style="text-align:center;">Pensive, reflective, inward</span></button>
+    </div>
+
+    <!-- CK states — appears after mood selected -->
+    <div id="reflect-ck-section" style="display:none;margin-bottom:1.5rem;">
+      <p class="section-label" style="margin-bottom:0.75rem;">Name it more precisely <span style="color:#4a4840;font-size:0.65rem;">— optional, up to 2</span></p>
+      <div class="filter-row" id="reflect-ck-options" style="flex-wrap:wrap;gap:0.5rem;"></div>
+    </div>
+
+    <!-- YouTube comment box -->
+    <div style="margin-bottom:1.5rem;">
+      <p class="section-label" style="margin-bottom:0.75rem;">Say something about this</p>
+      <textarea id="yt-comment-box" placeholder="Your reaction, before you see anyone else's..." style="width:100%;min-height:80px;padding:0.85rem 1rem;background:#181814;border:1px solid #555048;color:#e8e4dc;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:300;line-height:1.6;resize:vertical;outline:none;"></textarea>
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;">
+        <button class="btn-small" onclick="copyComment()">Copy</button>
+        <button class="btn-small" id="post-yt-btn" onclick="postToYouTube()" style="display:none;">Post to YouTube</button>
+        <a id="yt-video-link" href="#" target="_blank" style="font-size:0.72rem;color:#6a6458;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;padding:0.5rem 0;transition:color 0.2s;" onmouseover="this.style.color='#e8e4dc'" onmouseout="this.style.color='#6a6458'">Open on YouTube ↗</a>
+      </div>
+      <p id="comment-feedback" style="font-size:0.72rem;color:#8a8278;margin-top:0.5rem;min-height:1rem;"></p>
+    </div>
+
+    <!-- Dashboard link -->
+    <div class="divider"></div>
+    <button class="btn-small" onclick="go('screen-history')" style="margin-top:1rem;">View my history</button>
+  </div>
+</div>
+
+<!-- SIGN OFF -->
+<div class="screen" id="screen-signoff">
+  <div class="wordmark">Mote</div>
+  <div id="signoff-arc" style="margin-bottom:3rem;"></div>
+  <p class="complete-msg" style="font-size:1.2rem;">Mind yourself.</p>
+</div>
+
+<!-- WHAT MOTE IS LEARNING -->
+<div class="screen top" id="screen-viz">
+  <div class="nav-bar">
+    <button class="nav-item" onclick="go('screen-mood')">Commons</button>
+    <button class="nav-item" onclick="go('screen-history')">My history</button>
+    <button class="nav-item active">What Mote is learning</button>
+  </div>
+  <p class="section-label" style="margin-bottom:0.5rem;">Aggregate data</p>
+  <p style="font-size:0.78rem;color:#6a6458;margin-bottom:2.5rem;line-height:1.6;">Across all sessions. No individual data is identified.</p>
+  <div class="viz-block">
+    <p class="viz-title">How people arrive</p>
+    <p class="viz-sub">Mood on arrival across all sessions.</p>
+    <div id="viz-arrival"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">Mood shifts</p>
+    <p class="viz-sub">Where people end up after watching. The most common transitions the platform produces.</p>
+    <div id="viz-shifts"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">Emotional fingerprint</p>
+    <p class="viz-sub">The granular C&K states people name most often across all sessions.</p>
+    <div id="viz-ck"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="viz-block">
+    <p class="viz-title">Intensity calibration</p>
+    <p class="viz-sub">Where crowd-rated intensity diverges from editorial starting points.</p>
+    <div id="viz-drift"></div>
+  </div>
+  <p class="privacy-note">All data shown here is aggregated. Your personal history is visible only to you and can be deleted at any time.</p>
+</div>
+
+<!-- MY HISTORY -->
+<div class="screen top" id="screen-history">
+  <div class="nav-bar">
+    <button class="nav-item" onclick="go('screen-mood')">Commons</button>
+    <button class="nav-item active">My history</button>
+    <button class="nav-item" onclick="go('screen-viz')">What Mote is learning</button>
+  </div>
+  <div id="history-content"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ghcgfkjayzjzfozbwbfs.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoY2dma2pheXpqemZvemJ3YmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzEyNjgsImV4cCI6MjA4OTU0NzI2OH0.-6YB_X4b9P2z4guY-X9wQ2DdsnYru1rk3jlQ3VezWU4';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ────────────────────────────────────────────────────
+let currentUser = null;
+let currentSessionId = null;
+let currentWatchId = null;
+let currentMood = null;
+let currentIntention = null;
+let currentDepartureMood = null;
+let currentLastDepartureMood = null;
+let currentMixedMoods = [];
+let currentArrivalCkStates = [];
+let currentCkStates = [];
+let currentRating = 0;
+let currentIntensityRating = 0;
+let selectedContent = null;
+let shownContent = [];
+let activeFilters = { length: null, cat: null };
+// CONTENT loaded from mote_content.js
+let authMode = 'signin';
+
+const MOOD_LABELS = {
+  unsettled: 'Unsettled',
+  moved: 'Moved',
+  transcendent: 'Transcendent',
+  energized: 'Energized',
+  intellectually_active: 'Intellectually active',
+  settled: 'Settled',
+  contemplative: 'Contemplative'
+};
+
+const CK_BY_MOOD = {
+  unsettled:             ['anxiety','craving','moral_anger','fear'],
+  moved:                 ['empathic_pain','adoration','sadness','nostalgia','being_moved'],
+  transcendent:          ['awe','aesthetic_appreciation','entrancement'],
+  energized:             ['joy','triumph','excitement','admiration'],
+  intellectually_active: ['interest','cognitive_surprise','wonder'],
+  settled:               ['calmness','relief','satisfaction','contentment'],
+  contemplative:         ['contemplation','wistfulness','bittersweetness']
+};
+
+const CK_LABELS = {
+  anxiety: 'Anxiety', craving: 'Craving', moral_anger: 'Moral anger', fear: 'Fear',
+  empathic_pain: 'Empathic pain', adoration: 'Adoration', sadness: 'Sadness',
+  nostalgia: 'Nostalgia', being_moved: 'Being moved',
+  awe: 'Awe', aesthetic_appreciation: 'Aesthetic appreciation', entrancement: 'Entrancement',
+  joy: 'Joy', triumph: 'Triumph', excitement: 'Excitement', admiration: 'Admiration',
+  interest: 'Interest', cognitive_surprise: 'Surprise', wonder: 'Wonder',
+  calmness: 'Calmness', relief: 'Relief', satisfaction: 'Satisfaction', contentment: 'Contentment',
+  contemplation: 'Contemplation', wistfulness: 'Wistfulness', bittersweetness: 'Bittersweetness'
+};
+
+const INTENTION_LABELS = {
+  meets: 'Meets me where I am',
+  through: 'Helps me think through it',
+  different: 'Pulls me somewhere different',
+  breathe: 'Gives me room to breathe',
+  challenges: 'Challenges me'
+};
+
+const MOOD_OPPOSITES = {
+  unsettled: 'settled', moved: 'energized', transcendent: 'contemplative',
+  energized: 'moved', intellectually_active: 'settled',
+  settled: 'unsettled', contemplative: 'transcendent'
+};
+
+// ─── MIXED FEELINGS ───────────────────────────────────────────
+let mixedMode = false;
+let mixedMoods = []; // ordered array, index 0 = primary (highest weight)
+
+const CK_BY_MOOD_ARRIVAL = {
+  unsettled:             ['anxiety','craving','moral_anger','fear'],
+  moved:                 ['empathic_pain','adoration','sadness','nostalgia','being_moved'],
+  transcendent:          ['awe','aesthetic_appreciation','entrancement'],
+  energized:             ['joy','triumph','excitement','admiration'],
+  intellectually_active: ['interest','cognitive_surprise','wonder'],
+  settled:               ['calmness','relief','satisfaction','contentment'],
+  contemplative:         ['contemplation','wistfulness','bittersweetness'],
+};
+
+function toggleMixed() {
+  mixedMode = !mixedMode;
+  const grid   = document.getElementById('simple-mood-grid');
+  const picker = document.getElementById('mixed-picker');
+  const toggle = document.getElementById('mixed-toggle');
+  if (mixedMode) {
+    grid.style.display   = 'none';
+    picker.style.display = 'block';
+    toggle.style.color   = '#c8c2b8';
+    // Reset dropdowns
+    [1,2,3].forEach(i => {
+      document.getElementById(`mixed-${i}-mood`).value = '';
+      const sub = document.getElementById(`mixed-${i}-sub`);
+      sub.innerHTML = '<option value="">— refine —</option>';
+      sub.style.display = 'none';
+    });
+    mixedMoods = [];
+  } else {
+    grid.style.display   = '';
+    picker.style.display = 'none';
+    toggle.style.color   = '#6a6458';
+    mixedMoods = [];
+  }
+}
+
+function updateMixedSub(col) {
+  const mood = document.getElementById(`mixed-${col}-mood`).value;
+  const sub  = document.getElementById(`mixed-${col}-sub`);
+  if (!mood) {
+    sub.innerHTML = '<option value="">— refine —</option>';
+    sub.style.display = 'none';
+    return;
+  }
+  const states = CK_BY_MOOD_ARRIVAL[mood] || [];
+  sub.innerHTML = '<option value="">— refine —</option>' +
+    states.map(s => `<option value="${s}">${CK_LABELS[s] || s}</option>`).join('');
+  sub.style.display = 'block';
+}
+
+function confirmMixed() {
+  const moods = [];
+  [1,2,3].forEach(i => {
+    const m = document.getElementById(`mixed-${i}-mood`).value;
+    if (m) moods.push(m);
+  });
+  if (moods.length === 0) return;
+
+  mixedMoods = moods;
+  // Primary mood drives the main currentMood for backwards compat
+  currentMood = moods[0];
+  // Store all for pool building
+  currentMixedMoods = moods;
+
+  // Collect any sub-states selected
+  const subs = [];
+  [1,2,3].forEach(i => {
+    const s = document.getElementById(`mixed-${i}-sub`).value;
+    if (s) subs.push(s);
+  });
+  currentArrivalCkStates = subs;
+
+  go('screen-intention');
+}
+
+// ─── AUTH ────────────────────────────────────────────────────
+async function initAuth() {
+  const hideLoader = () => { const l = document.getElementById('screen-loading'); if(l) l.style.display='none'; };
+  const timeout = setTimeout(() => { hideLoader(); go('screen-auth'); }, 5000);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    clearTimeout(timeout);
+    hideLoader();
+    if (session) { currentUser = session.user; showApp(); }
+    else { go('screen-auth'); }
+  } catch(e) {
+    clearTimeout(timeout);
+    hideLoader();
+    go('screen-auth');
+  }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      showApp();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      go('screen-auth');
+    }
+  });
+}
+
+function showApp() { go('screen-landing'); }
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('auth-title').textContent = authMode === 'signin' ? 'Sign in' : 'Create account';
+  document.getElementById('auth-switch-btn').textContent = authMode === 'signin' ? 'Don\'t have an account? Sign up' : 'Already have an account? Sign in';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
+  if (authMode === 'signup') {
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+    errEl.style.color = '#8a8278';
+    errEl.textContent = 'Check your email to confirm your account.';
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+  }
+}
+
+async function signOut() {
+  if (currentSessionId && currentLastDepartureMood) {
+    await sb.from('sessions').update({
+      departure_mood: currentLastDepartureMood,
+      ended_at: new Date().toISOString()
+    }).eq('id', currentSessionId);
+  }
+  await sb.auth.signOut();
+  currentUser = null;
+  currentSessionId = null;
+  currentMood = null;
+  currentLastDepartureMood = null;
+  go('screen-auth');
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'screen-viz')     renderViz().catch(console.error);
+  if (id === 'screen-history') renderHistory().catch(console.error);
+  if (id === 'screen-commons') populateContent();
+}
+
+// ─── MOOD + INTENTION SELECTION ──────────────────────────────
+function selectMood(btn, mood) {
+  document.querySelectorAll('#screen-mood .mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentMood = mood;
+  setTimeout(() => go('screen-intention'), 180);
+}
+
+function selectIntention(btn, intention) {
+  document.querySelectorAll('.intention-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentIntention = intention;
+  const s = document.getElementById('session-summary');
+  if (s) s.textContent = `Arriving ${MOOD_LABELS[currentMood]} · ${INTENTION_LABELS[intention].toLowerCase()}`;
+  setTimeout(() => go('screen-filters'), 180);
+}
+
+function toggleFilter(btn, type, value) {
+  if (type === 'length') {
+    document.querySelectorAll('#length-filters .filter-chip').forEach(b => b.classList.remove('selected'));
+    activeFilters.length = activeFilters.length === value ? null : value;
+    if (activeFilters.length) btn.classList.add('selected');
+  } else {
+    document.querySelectorAll('#cat-filters .filter-chip').forEach(b => b.classList.remove('selected'));
+    activeFilters.cat = activeFilters.cat === value ? null : value;
+    if (activeFilters.cat) btn.classList.add('selected');
+  }
+}
+
+// ─── SESSION ─────────────────────────────────────────────────
+async function startSession() {
+  if (!currentUser) { go('screen-commons'); return; }
+  if (!currentSessionId) {
+    const insert = {
+      user_id:     currentUser.id,
+      arrival_mood: currentMood,
+      intention:   currentIntention,
+    };
+    if (currentMixedMoods.length > 1)       insert.mixed_moods = currentMixedMoods;
+    if (currentArrivalCkStates.length > 0)  insert.arrival_ck_states = currentArrivalCkStates;
+    const { data, error } = await sb.from('sessions').insert(insert).select().single();
+    if (!error && data) currentSessionId = data.id;
+  }
+  go('screen-commons');
+}
+
+// ─── CONTENT POOL + RENDERING ────────────────────────────────
+function getPool() {
+  if (!CONTENT.length) return [];
+
+  // Determine active moods — mixed or single
+  const activeMoods = currentMixedMoods.length > 0 ? currentMixedMoods : [currentMood];
+  const primaryMood = activeMoods[0];
+
+  let pool;
+  if (currentIntention === 'different') {
+    const opp = MOOD_OPPOSITES[primaryMood] || 'settled';
+    pool = CONTENT.filter(c => c.moods.includes(opp) && !activeMoods.some(m => c.moods.includes(m)));
+    if (pool.length < 3) pool = CONTENT.filter(c => !activeMoods.some(m => c.moods.includes(m)));
+  } else if (currentIntention === 'meets') {
+    if (activeMoods.length > 1) {
+      // Mixed: union of all mood pools, weighted by position
+      // Primary mood items score 3, secondary 2, tertiary 1
+      const scored = new Map();
+      activeMoods.forEach((mood, idx) => {
+        const weight = activeMoods.length - idx;
+        CONTENT.filter(c => c.moods.includes(mood)).forEach(c => {
+          scored.set(c.id, (scored.get(c.id) || 0) + weight);
+        });
+      });
+      pool = CONTENT.filter(c => scored.has(c.id));
+      // Sort by weight descending so highest matches surface first
+      pool.sort((a, b) => (scored.get(b.id) || 0) - (scored.get(a.id) || 0));
+    } else {
+      pool = CONTENT.filter(c => c.moods.includes(primaryMood));
+    }
+  } else if (currentIntention === 'breathe') {
+    pool = CONTENT.filter(c => c.intensity === '1');
+  } else if (currentIntention === 'through' || currentIntention === 'challenges') {
+    pool = CONTENT.filter(c => ['2','3'].includes(c.intensity));
+  } else {
+    pool = [...CONTENT];
+  }
+
+  if (activeFilters.length) pool = pool.filter(c => c.duration_bucket === activeFilters.length);
+  if (activeFilters.cat)    pool = pool.filter(c => c.category === activeFilters.cat);
+  if (pool.length < 2) pool = CONTENT.filter(c => c.moods.includes(primaryMood));
+  return pool;
+}
+
+function populateContent() {
+  const label = document.getElementById('commons-label');
+  if (label) label.textContent = `${MOOD_LABELS[currentMood] || ''} · ${(INTENTION_LABELS[currentIntention] || '').toLowerCase()}`;
+  const pool = getPool();
+  pool.sort(() => Math.random() - 0.5);
+  shownContent = pool.slice(0, 6);
+  selectedContent = null;
+  const w = document.getElementById('watch-btn');
+  if (w) { w.style.opacity = '0.35'; w.style.pointerEvents = 'none'; }
+  renderCards();
+}
+
+function refreshContent() { populateContent(); }
+
+function renderCards() {
+  const grid = document.getElementById('content-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!shownContent.length) { grid.innerHTML = '<p class="empty-state">No content matches those filters.</p>'; return; }
+  shownContent.forEach(item => {
+    const card = document.createElement('button');
+    card.className = 'content-card';
+    card.onclick = () => selectContent(card, item);
+    card.innerHTML = `
+      <div class="thumb">
+        <img src="https://img.youtube.com/vi/${item.yt_id}/mqdefault.jpg" alt=""
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+          style="width:100%;height:100%;object-fit:cover;display:block;">
+        <div class="thumb-placeholder" style="display:none"><div class="play-icon"></div></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <p class="card-title">${item.title}</p>
+        <div class="card-detail">
+          <span>${item.creator} &middot; ${item.duration_label} &middot; ${item.category}</span>
+          <span class="intensity-pill">intensity ${item.intensity}</span>
+        </div>
+        <div class="card-tags">${(item.tags||[]).map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function selectContent(card, item) {
+  document.querySelectorAll('.content-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedContent = item;
+  const w = document.getElementById('watch-btn');
+  w.style.opacity = '1';
+  w.style.pointerEvents = 'auto';
+}
+
+function goWatch() {
+  if (!selectedContent) return;
+  document.getElementById('watch-title').textContent = selectedContent.title;
+  document.getElementById('watch-meta').textContent = `${selectedContent.creator} · ${selectedContent.duration_label} · ${selectedContent.category} · intensity ${selectedContent.intensity}`;
+  document.getElementById('watch-embed').innerHTML = `<iframe src="https://www.youtube.com/embed/${selectedContent.yt_id}?rel=0&modestbranding=1&showinfo=0" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>`;
+  go('screen-watch');
+}
+
+// ─── FINISHED WATCHING ───────────────────────────────────────
+async function finishedWatching() {
+  if (currentUser && currentSessionId && selectedContent) {
+    const { data, error } = await sb.from('watches').insert({
+      user_id:         currentUser.id,
+      session_id:      currentSessionId,
+      content_id:      selectedContent.id,
+      content_title:   selectedContent.title,
+      content_creator: selectedContent.creator,
+      content_yt_id:   selectedContent.yt_id,
+    }).select().single();
+    if (!error && data) currentWatchId = data.id;
+  }
+  // Reset state
+  currentDepartureMood = null;
+  currentCkStates = [];
+  currentRating = 0;
+  currentIntensityRating = 0;
+  // Reset complete screen
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('lit'));
+  document.getElementById('reflect-panel').style.display = 'none';
+  document.getElementById('reflect-ck-section').style.display = 'none';
+  document.getElementById('yt-comment-box').value = '';
+  document.getElementById('comment-feedback').textContent = '';
+  document.querySelectorAll('#reflect-departure-grid .mood-btn').forEach(b => b.classList.remove('selected'));
+  // Set YouTube video link
+  if (selectedContent) {
+    const link = document.getElementById('yt-video-link');
+    if (link) link.href = `https://www.youtube.com/watch?v=${selectedContent.yt_id}`;
+  }
+  // Show shift if it exists from previous video in session
+  const completeShift = document.getElementById('complete-shift');
+  completeShift.innerHTML = '';
+  go('screen-complete');
+}
+
+// ─── DEPARTURE MOOD ───────────────────────────────────────────
+async function setStar(n) {
+  currentRating = n;
+  document.querySelectorAll('.star').forEach((s, i) => {
+    if (i < n) s.classList.add('lit'); else s.classList.remove('lit');
+  });
+  // Auto-save rating immediately
+  if (currentWatchId) {
+    await sb.from('watches').update({
+      rating: n,
+      feedback_at: new Date().toISOString()
+    }).eq('id', currentWatchId);
+  }
+}
+
+// ─── REFLECT PANEL ────────────────────────────────────────────
+function toggleReflect() {
+  const panel = document.getElementById('reflect-panel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+}
+
+async function selectReflectMood(btn, mood) {
+  document.querySelectorAll('#reflect-departure-grid .mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentDepartureMood = mood;
+  currentLastDepartureMood = mood;
+  // Save to watch row
+  if (currentWatchId) {
+    await sb.from('watches').update({ departure_mood: mood }).eq('id', currentWatchId);
+  }
+  // Show shift badge
+  const completeShift = document.getElementById('complete-shift');
+  if (currentMood && mood && currentMood !== mood) {
+    completeShift.innerHTML = `<div class="shift-badge">${MOOD_LABELS[currentMood]} <span class="shift-arrow">→</span> ${MOOD_LABELS[mood]}</div>`;
+  }
+  // Show CK options for this mood
+  const ckStates = CK_BY_MOOD[mood] || [];
+  const container = document.getElementById('reflect-ck-options');
+  container.innerHTML = '';
+  currentCkStates = [];
+  ckStates.forEach(state => {
+    const btn2 = document.createElement('button');
+    btn2.className = 'ck-btn';
+    btn2.textContent = CK_LABELS[state] || state;
+    btn2.onclick = () => toggleReflectCk(btn2, state);
+    container.appendChild(btn2);
+  });
+  document.getElementById('reflect-ck-section').style.display = 'block';
+}
+
+async function toggleReflectCk(btn, state) {
+  if (btn.classList.contains('selected')) {
+    btn.classList.remove('selected');
+    currentCkStates = currentCkStates.filter(s => s !== state);
+  } else {
+    if (currentCkStates.length >= 2) return;
+    btn.classList.add('selected');
+    currentCkStates.push(state);
+  }
+  // Auto-save CK states
+  if (currentWatchId && currentCkStates.length) {
+    await sb.from('watches').update({ ck_states: currentCkStates }).eq('id', currentWatchId);
+  }
+}
+
+function copyComment() {
+  const text = document.getElementById('yt-comment-box').value.trim();
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('comment-feedback').textContent = 'Copied.';
+    setTimeout(() => document.getElementById('comment-feedback').textContent = '', 2000);
+  });
+}
+
+async function postToYouTube() {
+  // Stub — OAuth + posting to be implemented
+  // For now, copy the comment and open YouTube
+  const text = document.getElementById('yt-comment-box').value.trim();
+  if (!text) return;
+  copyComment();
+  const link = document.getElementById('yt-video-link');
+  if (link && link.href !== '#') window.open(link.href, '_blank');
+  document.getElementById('comment-feedback').textContent = 'Comment copied — paste it on YouTube.';
+}
+
+// submitWatch kept for any legacy calls but no longer primary path
+async function submitWatch() {
+  if (currentWatchId) {
+    const updates = { feedback_at: new Date().toISOString() };
+    if (currentRating)          updates.rating = currentRating;
+    if (currentDepartureMood)   updates.departure_mood = currentDepartureMood;
+    if (currentCkStates.length) updates.ck_states = currentCkStates;
+    await sb.from('watches').update(updates).eq('id', currentWatchId);
+  }
+  if (currentDepartureMood) currentLastDepartureMood = currentDepartureMood;
+}
+
+function watchSomethingElse() {
+  selectedContent = null;
+  currentWatchId = null;
+  currentDepartureMood = null;
+  currentCkStates = [];
+  currentRating = 0;
+  currentIntensityRating = 0;
+  // Carry departure mood forward, clear mixed state
+  if (currentLastDepartureMood) {
+    currentMood = currentLastDepartureMood;
+    currentMixedMoods = [];
+    currentArrivalCkStates = [];
+  }
+  const ctx = document.getElementById('mid-intention-context');
+  if (ctx) ctx.textContent = currentMood ? `Feeling ${MOOD_LABELS[currentMood].toLowerCase()}.` : '';
+  document.querySelectorAll('#screen-intention-mid .intention-btn').forEach(b => b.classList.remove('selected'));
+  go('screen-intention-mid');
+}
+
+function selectMidIntention(btn, intention) {
+  document.querySelectorAll('#screen-intention-mid .intention-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentIntention = intention;
+  setTimeout(() => go('screen-commons'), 180);
+}
+
+async function endSession() {
+  // Stamp session departure with last logged departure mood
+  if (currentSessionId && currentLastDepartureMood) {
+    await sb.from('sessions').update({
+      departure_mood: currentLastDepartureMood,
+      ended_at: new Date().toISOString()
+    }).eq('id', currentSessionId);
+  }
+
+  // Build sign-off arc
+  const arcEl = document.getElementById('signoff-arc');
+  const arrival = MOOD_LABELS[currentMood] || currentMood;
+  const departure = MOOD_LABELS[currentLastDepartureMood] || null;
+
+  if (departure && departure !== arrival) {
+    arcEl.innerHTML = `
+      <p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:300;color:#6a6458;margin-bottom:0.5rem;">You arrived ${arrival}.</p>
+      <p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:300;color:#c8c2b8;">You're leaving ${departure}.</p>`;
+  } else if (arrival) {
+    arcEl.innerHTML = `
+      <p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:300;color:#c8c2b8;">You arrived ${arrival}.</p>`;
+  } else {
+    arcEl.innerHTML = '';
+  }
+
+  go('screen-signoff');
+
+  // Sign out after a moment so they can read it
+  setTimeout(async () => {
+    await sb.auth.signOut();
+    currentUser = null;
+    currentSessionId = null;
+    currentMood = null;
+    currentLastDepartureMood = null;
+    go('screen-auth');
+  }, 3000);
+}
+
+// ─── VISUALIZATION ────────────────────────────────────────────
+async function renderViz() {
+  // Arrival moods
+  const { data: arrivalData } = await sb.from('v_arrival_moods').select('*');
+  const aEl = document.getElementById('viz-arrival');
+  if (arrivalData && arrivalData.length) {
+    const maxA = Math.max(...arrivalData.map(r => Number(r.session_count)));
+    aEl.innerHTML = arrivalData.map(r => `
+      <div class="bar-row">
+        <span class="bar-label">${MOOD_LABELS[r.mood] || r.mood}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(Number(r.session_count)/maxA*100)}%"></div></div>
+        <span class="bar-count">${r.session_count}</span>
+      </div>`).join('');
+  } else { aEl.innerHTML = '<p class="empty-state">No sessions yet.</p>'; }
+
+  // Mood shifts
+  const { data: shiftData } = await sb.from('v_mood_shifts').select('*');
+  const sEl = document.getElementById('viz-shifts');
+  if (shiftData && shiftData.length) {
+    sEl.innerHTML = shiftData.slice(0, 10).map(r => `
+      <div class="shift-row">
+        <span class="shift-from">${MOOD_LABELS[r.arrival_mood] || r.arrival_mood}</span>
+        <span class="shift-arrow">→</span>
+        <span class="shift-to">${MOOD_LABELS[r.departure_mood] || r.departure_mood}</span>
+        <span class="shift-pct">${r.pct}%</span>
+      </div>`).join('');
+  } else { sEl.innerHTML = '<p class="empty-state">No shift data yet.</p>'; }
+
+  // CK fingerprint
+  const { data: ckData } = await sb.from('v_ck_fingerprint').select('*');
+  const cEl = document.getElementById('viz-ck');
+  if (ckData && ckData.length) {
+    const maxC = Math.max(...ckData.map(r => Number(r.count)));
+    cEl.innerHTML = ckData.map(r => `
+      <div class="bar-row">
+        <span class="bar-label">${CK_LABELS[r.ck_state] || r.ck_state}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(Number(r.count)/maxC*100)}%"></div></div>
+        <span class="bar-count">${r.count}</span>
+      </div>`).join('');
+  } else { cEl.innerHTML = '<p class="empty-state">No granular states logged yet.</p>'; }
+
+  // Intensity drift
+  const { data: driftData } = await sb.from('v_intensity_drift').select('*');
+  const dEl = document.getElementById('viz-drift');
+  if (driftData && driftData.length) {
+    dEl.innerHTML = driftData.map(r => {
+      const delta = Number(r.crowd_intensity) - Number(r.editorial_intensity);
+      const arrow = delta > 0 ? `<span class="drift-crowd drift-up">↑ ${r.crowd_intensity} crowd</span>`
+                  : delta < 0 ? `<span class="drift-crowd drift-down">↓ ${r.crowd_intensity} crowd</span>`
+                  : `<span class="drift-crowd drift-same">= ${r.crowd_intensity} confirmed</span>`;
+      return `<div class="drift-row">
+        <span class="drift-title">${r.title}</span>
+        <span class="drift-editorial">${r.editorial_intensity} editorial</span>
+        ${arrow}
+      </div>`;
+    }).join('');
+  } else { dEl.innerHTML = '<p class="empty-state">Not enough ratings yet.</p>'; }
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────
+async function renderHistory() {
+  const el = document.getElementById('history-content');
+  if (!currentUser) { el.innerHTML = '<p class="empty-state">Sign in to see your history.</p>'; return; }
+  el.innerHTML = '<p class="section-label">My history</p><p class="empty-state">Loading...</p>';
+
+  // Query watches joined with sessions directly — no content table needed
+  const { data, error } = await sb.from('watches')
+    .select('*, sessions(arrival_mood, intention, created_at)')
+    .eq('user_id', currentUser.id)
+    .not('feedback_at', 'is', null)
+    .order('watched_at', { ascending: false });
+
+  if (!data || data.length === 0) {
+    el.innerHTML = `<p class="section-label">My history</p>
+      <p style="font-size:0.85rem;color:#6a6458;font-style:italic;padding:2rem 0;">Nothing here yet. Watch something and log your response.</p>
+      <button class="btn-primary" onclick="go('screen-mood')">Go to commons</button>`;
+    return;
+  }
+
+  const shifts = data.filter(r => r.departure_mood && r.departure_mood !== r.sessions?.arrival_mood);
+  const rated = data.filter(r => r.rating);
+  const avgRating = rated.length ? (rated.reduce((s,r) => s + r.rating, 0) / rated.length).toFixed(1) : '—';
+  const arrivalCounts = {};
+  data.forEach(r => {
+    const m = r.sessions?.arrival_mood;
+    if (m) arrivalCounts[m] = (arrivalCounts[m]||0) + 1;
+  });
+
+  el.innerHTML = `
+    <p class="section-label">My history</p>
+    <div class="stat-grid">
+      <div class="stat-card"><p class="stat-num">${data.length}</p><p class="stat-label">Watched</p></div>
+      <div class="stat-card"><p class="stat-num">${shifts.length}</p><p class="stat-label">Shifts logged</p></div>
+      <div class="stat-card"><p class="stat-num">${avgRating}</p><p class="stat-label">Avg rating</p></div>
+    </div>
+    <p class="section-label">How I've been arriving</p>
+    <div style="margin-bottom:2rem;">
+      ${Object.entries(arrivalCounts).sort((a,b)=>b[1]-a[1]).map(([m,n]) => `
+        <div class="bar-row">
+          <span class="bar-label">${MOOD_LABELS[m]||m}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/data.length*100)}%"></div></div>
+          <span class="bar-count">${n}</span>
+        </div>`).join('')}
+    </div>
+    <p class="section-label">Recent sessions</p>
+    ${data.slice(0,15).map(r => {
+      const arrivalMood = r.sessions?.arrival_mood;
+      const hasShift = r.departure_mood && r.departure_mood !== arrivalMood;
+      const shiftStr = hasShift
+        ? `<p class="history-shift">${MOOD_LABELS[arrivalMood]||arrivalMood} → ${MOOD_LABELS[r.departure_mood]||r.departure_mood}</p>`
+        : arrivalMood ? `<p class="history-shift" style="color:#4a4840;">${MOOD_LABELS[arrivalMood]||arrivalMood} — no shift</p>` : '';
+      const ckStr = r.ck_states && r.ck_states.length
+        ? `<div class="history-ck">${r.ck_states.map(s => `<span class="ck-tag">${CK_LABELS[s]||s}</span>`).join('')}</div>`
+        : '';
+      const title = r.content_title || 'Untitled';
+      const creator = r.content_creator || '';
+      return `<div class="history-entry">
+        <p class="history-title">${title}</p>
+        <p class="history-meta">${creator} · ${new Date(r.watched_at).toLocaleDateString()}${r.rating ? ' · ' + '★'.repeat(r.rating) : ''}</p>
+        ${shiftStr}
+        ${ckStr}
+      </div>`;
+    }).join('')}
+    <div class="divider"></div>
+    <p style="font-size:0.68rem;color:#4a4840;line-height:1.6;">Your history is stored securely and never shared without your explicit consent.</p>`;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof supabase !== 'undefined') {
+    initAuth().catch(e => {
+      console.error('Auth init failed:', e);
+      const l = document.getElementById('screen-loading');
+      if (l) l.style.display = 'none';
+      go('screen-auth');
+    });
+  } else {
+    const l = document.getElementById('screen-loading');
+    if (l) l.innerHTML = '<p style="color:#b0aaa2;font-size:0.8rem;font-family:sans-serif;padding:2rem;text-align:center;">Connection error. Please refresh.</p>';
+  }
+});
+</script>
+</body>
+</html>
