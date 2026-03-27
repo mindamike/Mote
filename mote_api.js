@@ -7,7 +7,7 @@ Copy
 // Replace YOUR_YOUTUBE_API_KEY with your actual key
 // ═══════════════════════════════════════════════════════════════
  
-const YT_API_KEY = 'YOUR_YOUTUBE_API_KEY';
+const YT_API_KEY = 'AIzaSyAM3Lur1z-ZPaF1NF15mXjhD3qfczK9TlE';
 const YT_BASE    = 'https://www.googleapis.com/youtube/v3';
  
 // ─── MOOD → SEARCH QUERIES ────────────────────────────────────
